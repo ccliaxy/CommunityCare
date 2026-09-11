@@ -1,0 +1,14 @@
+node_modules/
+.env
+*.log
+dist/
+build/
+
+# Flutter
+mobile_app/build/
+mobile_app/.dart_tool/
+mobile_app/.flutter-plugins
+
+# OS
+.DS_Store
+Thumbs.db
