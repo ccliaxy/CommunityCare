@@ -1,0 +1,66 @@
+.cc-login { min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: 1fr 1fr; background: #fff; color: #37474f; font-family: Arial, Helvetica, sans-serif; }
+.cc-login *, .cc-dialog * { box-sizing: border-box; }
+.cc-login button, .cc-login input, .cc-dialog button { font: inherit; }
+.cc-login button, .cc-dialog button { cursor: pointer; }
+.cc-login button:focus-visible, .cc-login input:focus-visible, .cc-dialog button:focus-visible { outline: 3px solid #005c56; outline-offset: 4px; }
+.cc-brand-panel { background: #087f78; color: white; padding: clamp(32px, 4.4vw, 72px); display: flex; flex-direction: column; justify-content: space-between; gap: 64px; position: relative; overflow: hidden; }
+.cc-brand-panel::before, .cc-brand-panel::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
+.cc-brand-panel::before { width: 430px; height: 430px; bottom: -180px; left: -160px; background: #ffffff0c; }
+.cc-brand-panel::after { width: 340px; height: 340px; right: -230px; top: 28%; border: 70px solid #ffffff09; }
+.cc-brand-content, .cc-brand-footer { position: relative; z-index: 1; }
+.cc-brand { display: flex; gap: 16px; align-items: center; font-size: 24px; font-weight: 700; line-height: 1.35; }
+.cc-brand img { flex: 0 0 48px; object-fit: contain; border-radius: 50%; background: #fff; padding: 5px; }
+.cc-welcome { margin-top: clamp(60px, 12vh, 144px); max-width: 440px; }
+.cc-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.6px; line-height: 1.8; }
+.cc-welcome h1 { font-size: clamp(30px, 3vw, 44px); font-weight: 700; line-height: 1.2; margin: 18px 0; }
+.cc-welcome p { font-size: 17px; line-height: 1.8; margin: 0; }
+.cc-brand-footer { font-size: 13px; line-height: 1.5; margin: 0; }
+.cc-form-panel { display: flex; align-items: center; justify-content: center; padding: 64px clamp(24px, 5vw, 80px); min-width: 0; }
+.cc-form-container { width: 100%; max-width: 448px; }
+.cc-preview-label { color: #246a3b; font-size: 11px; letter-spacing: 1.8px; font-weight: 700; margin: 0 0 14px; }
+.cc-form-header h2 { font-size: 27px; line-height: 1.3; font-weight: 700; margin: 0 0 12px; }
+.cc-form-header > p:last-child { color: #616161; font-size: 16px; line-height: 1.6; margin: 0; }
+.cc-form { display: grid; gap: 22px; margin-top: 32px; }
+.cc-field { display: grid; gap: 8px; }
+.cc-field label { font-size: 14px; font-weight: 700; }
+.cc-label-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.cc-input-wrap { position: relative; }
+.cc-input-wrap input { background: #f6faf8; border: 1px solid #bdc9c6; border-radius: 6px; width: 100%; min-height: 52px; padding: 14px 12px 14px 44px; color: #263a32; font-size: 16px; }
+.cc-input-wrap input::placeholder { color: #67756f; opacity: 1; }
+.cc-input-wrap input[aria-invalid=true] { border: 2px solid #af2734; }
+.cc-input-wrap .cc-password { padding-right: 52px; }
+.cc-input-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #61716b; pointer-events: none; }
+.cc-password-toggle { position: absolute; right: 3px; top: 3px; bottom: 3px; width: 44px; border: 0; border-radius: 4px; background: transparent; display: grid; place-items: center; color: #52655d; }
+.cc-password-toggle:hover { background: #e4eee8; }
+.cc-text-button { color: #006a63; background: transparent; border: 0; padding: 5px 0; font-size: 14px !important; text-decoration: underline; text-underline-offset: 3px; }
+.cc-text-button:hover { color: #003c38; }
+.cc-checkbox { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 14px; line-height: 1.6; }
+.cc-checkbox input { appearance: auto; width: 18px; height: 18px; margin: 2px 0 0; flex-shrink: 0; accent-color: #2e7d32; }
+.cc-field-note { color: #67716d; font-size: 12px; line-height: 1.5; margin: 6px 0 0 28px; }
+.cc-primary { border: 0; border-radius: 999px; background: #2e7d32; color: #fff; padding: 15px 24px; min-height: 52px; font-weight: 700 !important; }
+.cc-primary:hover { background: #256629; }
+.cc-login-button { display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; }
+.cc-login-button svg { flex-shrink: 0; }
+.cc-error { color: #af2734; font-size: 13px; line-height: 1.5; margin: 0; }
+.cc-notice { padding: 14px 16px; border: 1px solid #b9d8bf; background: #edf6ef; border-radius: 8px; color: #254b32; font-size: 14px; line-height: 1.6; margin: 0; }
+.cc-footer { border-top: 1px solid #dfe3e2; padding-top: 24px; margin-top: 20px; text-align: center; font-size: 13px; color: #616161; }
+.cc-footer p { margin: 0 0 12px; line-height: 1.5; }
+.cc-footer nav { display: flex; gap: 20px; justify-content: center; }
+.cc-dialog { margin: auto; width: min(460px, calc(100% - 32px)); max-height: calc(100dvh - 48px); overflow: auto; border: 0; border-radius: 18px; padding: 28px; background: #fff; color: #37474f; box-shadow: 0 24px 80px #123a3533; font-family: Arial, Helvetica, sans-serif; }
+.cc-dialog::backdrop { background: #102f2acc; }
+.cc-dialog h2 { font-size: 24px; line-height: 1.3; margin: 0; font-weight: 700; }
+.cc-dialog p { line-height: 1.7; margin: 18px 0 24px; }
+@media (max-width: 850px) {
+  .cc-login { grid-template-columns: 1fr; }
+  .cc-brand-panel { padding: 28px 24px; gap: 24px; }
+  .cc-brand { font-size: 21px; }
+  .cc-welcome { margin-top: 30px; max-width: 560px; }
+  .cc-welcome h1 { font-size: 30px; }
+  .cc-welcome p { font-size: 15px; }
+  .cc-brand-footer { display: none; }
+  .cc-form-panel { padding: 40px 24px; }
+}
+@media (max-width: 380px) {
+  .cc-brand-panel, .cc-form-panel { padding-left: 20px; padding-right: 20px; }
+  .cc-form-header h2 { font-size: 24px; }
+}
