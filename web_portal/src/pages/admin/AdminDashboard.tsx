@@ -1,0 +1,12 @@
+import { useAdmin } from './AdminContext'
+import { Badge, BarChart, LineChart, matches, Panel, Table } from './AdminUI'
+
+export default function AdminDashboard() {
+  const { state, search, navigate } = useAdmin()
+  const properties = state.properties.filter(p => p.status !== 'Archived')
+  function createProperty() { navigate('properties'); requestAnimationFrame(() => document.getElementById('ad-new-property')?.click()) }
+  return <div className="ad-main"><div className="ad-heading"><h2>System Overview</h2><div className="ad-actions"><button className="ad-primary" onClick={createProperty}>＋ Add Property</button><button className="ad-primary" onClick={() => { navigate('users'); requestAnimationFrame(() => document.getElementById('ad-user-name')?.focus()) }}>＋ Add User</button><button onClick={() => navigate('audit')}>View Audit Logs</button></div></div>
+    <div className="ad-kpis"><div className="ad-kpi">Registered Properties<strong>{properties.length}</strong></div><div className="ad-kpi">Active User Accounts<strong>{state.users.filter(u => u.active).length}</strong></div><div className="ad-kpi">Active Subscription Plans<strong>{state.plans.filter(p => p.active).length}</strong></div><div className="ad-kpi">Property Alert Summary<strong>{properties.reduce((sum, p) => sum + p.alerts, 0)} Pending</strong></div></div>
+    <div className="ad-wide-grid"><Panel title="Recent Properties Activity" actions={<button onClick={() => navigate('properties')}>View All</button>}><Table label="Dashboard properties"><thead><tr><th>Property Name</th><th>Location</th><th>Status</th><th>Action</th></tr></thead><tbody>{properties.filter(p => matches(search, p.name, p.address, p.status)).map(p => <tr key={p.id}><th>{p.name}</th><td>{p.address}</td><td><Badge value={p.status} /></td><td><button onClick={() => navigate('properties')}>Manage</button></td></tr>)}</tbody></Table><p className="ad-muted">Counts reflect this Admin preview's records. Archived properties are excluded.</p></Panel><Panel title="Analytics Snapshot" actions={<button onClick={() => navigate('analytics')}>Open Analytics</button>}><h3>Response Times</h3><LineChart labels={properties.map(p => p.id.slice(-4))} series={[{ name: 'Average response', color: '#ec8b16', values: properties.map(p => p.response) }]} unit="Minutes · property sample averages" /><h3 style={{ marginTop: 20 }}>Pending Alerts by Property</h3><BarChart labels={properties.map(p => p.id.slice(-4))} values={properties.map(p => p.alerts)} colors={['#ed6060', '#ef991c', '#47a2e7']} /></Panel></div>
+  </div>
+}

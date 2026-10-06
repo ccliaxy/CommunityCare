@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  const LoginPage({
+    super.key,
+    required this.onSignIn,
+    required this.busy,
+    required this.authError,
+  });
+  final Future<void> Function(String email, String password) onSignIn;
+  final bool busy;
+  final String authError;
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -13,7 +21,6 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _rememberMe = false;
 
   static const _green = Color(0xFF43A047);
   static const _textColor = Color(0xFF37474F);
@@ -28,73 +35,48 @@ class _LoginPageState extends State<LoginPage> {
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _login() {
+  Future<void> _login() async {
+    if (widget.busy) return;
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     FocusScope.of(context).unfocus();
 
-    // TODO: Connect to the backend login API.
-    // Navigate according to the role returned by the backend.
-    _showMessage(
-      'Login is not connected yet. This is a UI preview.',
+    await widget.onSignIn(
+      _usernameController.text.trim(),
+      _passwordController.text,
     );
   }
 
-  InputDecoration _inputDecoration({
-    required String hint,
-    Widget? suffixIcon,
-  }) {
+  InputDecoration _inputDecoration({required String hint, Widget? suffixIcon}) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: const TextStyle(
-        color: Color(0xFF78909C),
-        fontSize: 18,
-      ),
+      hintStyle: const TextStyle(color: Color(0xFF78909C), fontSize: 18),
       filled: true,
       fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 18,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       suffixIcon: suffixIcon,
       errorMaxLines: 3,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(
-          color: Color(0xFFCFD8DC),
-          width: 2,
-        ),
+        borderSide: const BorderSide(color: Color(0xFFCFD8DC), width: 2),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(
-          color: _green,
-          width: 2,
-        ),
+        borderSide: const BorderSide(color: _green, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(
-          color: Colors.red,
-          width: 2,
-        ),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(
-          color: Colors.red,
-          width: 2,
-        ),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
       ),
     );
   }
@@ -109,11 +91,7 @@ class _LoginPageState extends State<LoginPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFC8E6C9),
-              Color(0xFFF1F8E9),
-              Color(0xFFFCF9F8),
-            ],
+            colors: [Color(0xFFC8E6C9), Color(0xFFF1F8E9), Color(0xFFFCF9F8)],
           ),
         ),
         child: SafeArea(
@@ -121,11 +99,9 @@ class _LoginPageState extends State<LoginPage> {
             builder: (context, constraints) {
               return SingleChildScrollView(
                 keyboardDismissBehavior:
-                ScrollViewKeyboardDismissBehavior.onDrag,
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight,
-                  ),
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -133,9 +109,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     child: Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: 448,
-                        ),
+                        constraints: const BoxConstraints(maxWidth: 448),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -195,10 +169,10 @@ class _LoginPageState extends State<LoginPage> {
                                 key: _formKey,
                                 child: Column(
                                   crossAxisAlignment:
-                                  CrossAxisAlignment.stretch,
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     const Text(
-                                      'Username / Email',
+                                      'Email',
                                       style: TextStyle(
                                         color: _textColor,
                                         fontSize: 18,
@@ -208,8 +182,13 @@ class _LoginPageState extends State<LoginPage> {
                                     const SizedBox(height: 12),
                                     TextFormField(
                                       controller: _usernameController,
+                                      enabled: !widget.busy,
+                                      keyboardType: TextInputType.emailAddress,
+                                      autofillHints: const [
+                                        AutofillHints.username,
+                                      ],
                                       decoration: _inputDecoration(
-                                        hint: 'Enter your username or email',
+                                        hint: 'Enter your email',
                                       ),
                                       style: const TextStyle(
                                         color: _textColor,
@@ -221,7 +200,7 @@ class _LoginPageState extends State<LoginPage> {
                                       validator: (value) {
                                         if (value == null ||
                                             value.trim().isEmpty) {
-                                          return 'Please enter your username or email.';
+                                          return 'Please enter your email.';
                                         }
                                         return null;
                                       },
@@ -238,6 +217,10 @@ class _LoginPageState extends State<LoginPage> {
                                     const SizedBox(height: 12),
                                     TextFormField(
                                       controller: _passwordController,
+                                      enabled: !widget.busy,
+                                      autofillHints: const [
+                                        AutofillHints.password,
+                                      ],
                                       obscureText: _obscurePassword,
                                       autocorrect: false,
                                       enableSuggestions: false,
@@ -254,7 +237,7 @@ class _LoginPageState extends State<LoginPage> {
                                           onPressed: () {
                                             setState(() {
                                               _obscurePassword =
-                                              !_obscurePassword;
+                                                  !_obscurePassword;
                                             });
                                           },
                                           icon: Icon(
@@ -275,28 +258,27 @@ class _LoginPageState extends State<LoginPage> {
                                       },
                                     ),
                                     const SizedBox(height: 16),
-                                    CheckboxListTile(
-                                      contentPadding: EdgeInsets.zero,
-                                      controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                      activeColor: _green,
-                                      title: const Text(
-                                        'Remember Me',
-                                        style: TextStyle(
-                                          color: _textColor,
-                                          fontSize: 18,
+                                    const Text(
+                                      'You will stay signed in on this device. Sign out when using a shared phone.',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                    if (widget.authError.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 12),
+                                        child: Semantics(
+                                          liveRegion: true,
+                                          child: Text(
+                                            widget.authError,
+                                            style: const TextStyle(
+                                              color: Colors.red,
+                                              fontSize: 17,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                      value: _rememberMe,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _rememberMe = value ?? false;
-                                        });
-                                      },
-                                    ),
                                     const SizedBox(height: 24),
                                     ElevatedButton(
-                                      onPressed: _login,
+                                      onPressed: widget.busy ? null : _login,
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: _green,
                                         foregroundColor: Colors.white,
@@ -306,15 +288,18 @@ class _LoginPageState extends State<LoginPage> {
                                           vertical: 16,
                                         ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                          BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         textStyle: const TextStyle(
                                           fontSize: 22,
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
-                                      child: const Text('Login'),
+                                      child: Text(
+                                        widget.busy ? 'Signing in…' : 'Login',
+                                      ),
                                     ),
                                     const SizedBox(height: 16),
                                     TextButton(
@@ -324,8 +309,9 @@ class _LoginPageState extends State<LoginPage> {
                                         );
                                       },
                                       style: TextButton.styleFrom(
-                                        foregroundColor:
-                                        const Color(0xFF2E7D32),
+                                        foregroundColor: const Color(
+                                          0xFF2E7D32,
+                                        ),
                                         minimumSize: const Size(0, 48),
                                       ),
                                       child: const Text(
@@ -334,8 +320,7 @@ class _LoginPageState extends State<LoginPage> {
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w600,
-                                          decoration:
-                                          TextDecoration.underline,
+                                          decoration: TextDecoration.underline,
                                         ),
                                       ),
                                     ),

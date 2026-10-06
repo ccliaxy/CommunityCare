@@ -1,0 +1,58 @@
+.cc-auth-status{
+    max-width:620px;
+    margin:12vh auto;
+    padding:28px;
+    border:1px solid #d3e3df;
+    border-radius:12px;
+    background:#fff;
+    color:#25443d;
+    font:16px/1.6 Arial,sans-serif}
+    
+.cc-auth-status h1{
+    font-size:24px;
+    font-weight:700}
+        
+.cc-auth-status div{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap}
+
+.cc-auth-status button,.cc-session-banner button{
+    border:1px solid #087c76;
+    border-radius:5px;
+    background:#087c76;
+    color:white;
+    padding:9px 16px;
+    cursor:pointer;
+    font:inherit}
+    
+.cc-session-banner{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:16px;
+    padding:10px 20px;
+    background:#eaf5f1;
+    color:#244b40;
+    font:13px/1.5 Arial,sans-serif}
+    
+.cc-session-banner button{
+    flex-shrink:0}
+    
+.cc-login-button:disabled{
+    opacity:.65;
+    cursor:wait}
+    
+.cc-auth-status button:focus-visible,
+.cc-session-banner button:focus-visible{
+    outline:3px solid #3298cb;
+    outline-offset:3px}
+    
+@media(max-width:600px){
+    .cc-auth-status{
+        margin:40px 16px}
+        
+    .cc-session-banner{
+        align-items:flex-start;
+        flex-direction:column}
+}

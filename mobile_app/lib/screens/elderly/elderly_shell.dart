@@ -13,8 +13,10 @@ class ElderlyShell extends StatefulWidget {
     super.key,
     this.showInitialInvitation = true,
     this.onLogout,
+    this.accountName,
   });
   final bool showInitialInvitation;
+  final String? accountName;
   final VoidCallback? onLogout;
   @override
   State<ElderlyShell> createState() => _ElderlyShellState();
@@ -174,8 +176,10 @@ class _ElderlyShellState extends State<ElderlyShell> {
                       crossAxisAlignment: WrapCrossAlignment.center,
                       spacing: 8,
                       children: [
-                        const Text(
-                          'UI preview · Sample data',
+                        Text(
+                          widget.accountName == null
+                              ? 'UI preview · Sample data'
+                              : 'Signed in: ${widget.accountName} · Sample data',
                           style: TextStyle(fontSize: 13, color: careGreen),
                         ),
                         TextButton.icon(

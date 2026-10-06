@@ -6,7 +6,9 @@ import 'family_settings_page.dart';
 import 'family_widgets.dart';
 
 class FamilyShell extends StatefulWidget {
-  const FamilyShell({super.key});
+  const FamilyShell({super.key, this.onLogout, this.accountName});
+  final VoidCallback? onLogout;
+  final String? accountName;
   @override
   State<FamilyShell> createState() => _FamilyShellState();
 }
@@ -20,7 +22,9 @@ class _FamilyShellState extends State<FamilyShell> {
   }
 
   void _logout() {
-    if (Navigator.of(context).canPop()) {
+    if (widget.onLogout != null) {
+      widget.onLogout!();
+    } else if (Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     } else {
       final old = _data;
@@ -93,8 +97,10 @@ class _FamilyShellState extends State<FamilyShell> {
                   vertical: 8,
                 ),
                 color: const Color(0xFFEAF0E4),
-                child: const Text(
-                  'Family UI preview · Sample data',
+                child: Text(
+                  widget.accountName == null
+                      ? 'Family UI preview · Sample data'
+                      : 'Signed in: ${widget.accountName} · Family pages still use sample data',
                   style: TextStyle(fontSize: 13, color: familyGreen),
                 ),
               ),
