@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'family_demo_data.dart';
 import 'family_widgets.dart';
+import 'family_location_map.dart';
 
 class FamilySettingsPage extends StatelessWidget {
   const FamilySettingsPage({
@@ -137,54 +138,43 @@ class FamilySettingsPage extends StatelessWidget {
                 onChanged: (value) => data.setAlerts(resident, value),
               ),
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F5E9),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 48,
-                      backgroundColor: Color(0xFFD8E8CA),
-                      child: Icon(
-                        Icons.home_outlined,
-                        size: 44,
-                        color: familyGreen,
-                      ),
-                    ),
-                    SizedBox(height: 14),
-                    Text(
-                      'Residence boundary preview',
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Illustration only · No live location',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
               Text(
-                'Radius: ${resident.radius.round()}m',
+                'Centre: ${resident.zoneLatitude.toStringAsFixed(5)}, ${resident.zoneLongitude.toStringAsFixed(5)}',
+              ),
+              Text(
+                'Radius: ${resident.radius.round()} m',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              Slider(
-                key: const ValueKey('safe-radius'),
-                value: resident.radius,
-                min: 100,
-                max: 2000,
-                divisions: 19,
-                label: '${resident.radius.round()}m',
-                semanticFormatterCallback: (value) => '${value.round()} metres',
-                onChanged: resident.alertsEnabled
-                    ? (value) => data.setRadius(resident, value)
-                    : null,
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                key: const ValueKey('edit-safe-zone'),
+                onPressed: () async {
+                  final result = await Navigator.of(context)
+                      .push<SafeZoneDraft>(
+                        MaterialPageRoute(
+                          builder: (_) => FamilyLocationMap(
+                            resident: resident,
+                            editable: true,
+                          ),
+                        ),
+                      );
+                  if (result != null && context.mounted) {
+                    data.setSafeZone(
+                      resident,
+                      result.latitude,
+                      result.longitude,
+                      result.radius,
+                    );
+                    familyMessage(
+                      context,
+                      'Safe zone saved for this demo session only.',
+                    );
+                  }
+                },
+                icon: const Icon(Icons.edit_location_alt_outlined),
+                label: const Text('Edit on map'),
               ),
+              const SizedBox(height: 12),
               const Text(
                 'Location monitoring and boundary alerts will be connected later.',
               ),

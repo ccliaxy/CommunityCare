@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'family_demo_data.dart';
 import 'family_widgets.dart';
+import 'family_location_map.dart';
 
 class FamilyElderlyPage extends StatelessWidget {
   const FamilyElderlyPage({super.key, required this.data});
@@ -91,6 +92,33 @@ class FamilyElderlyPage extends StatelessWidget {
                     ],
                   ),
                 ),
+            ],
+          ),
+        ),
+        const FamilySection('Location & Safe Zone'),
+        FamilyCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(Icons.map_outlined, color: familyGreen, size: 40),
+              const SizedBox(height: 12),
+              const Text('Sample location only — not live GPS.'),
+              Text('Safe-zone radius: ${resident.radius.round()} m'),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                key: const ValueKey('view-resident-map'),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => FamilyLocationMap(resident: resident),
+                  ),
+                ),
+                icon: const Icon(Icons.open_in_full),
+                label: const Text('View map'),
+              ),
+              const Text(
+                'Edit the zone centre and radius in Settings.',
+                style: TextStyle(fontSize: 13),
+              ),
             ],
           ),
         ),

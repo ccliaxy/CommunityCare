@@ -24,6 +24,10 @@ class FamilyResident {
     required this.email,
     required this.checkedIn,
     required this.reminders,
+    this.sampleLatitude = 5.4150,
+    this.sampleLongitude = 100.3300,
+    this.zoneLatitude = 5.4141,
+    this.zoneLongitude = 100.3288,
   });
   final String id;
   String name;
@@ -42,6 +46,11 @@ class FamilyResident {
   bool alertsEnabled = true;
   bool voiceReminders = true;
   double radius = 500;
+  // Fictional demo points near George Town. Not obtained from any device/person.
+  final double sampleLatitude;
+  final double sampleLongitude;
+  double zoneLatitude;
+  double zoneLongitude;
 }
 
 /// In-memory sample data only. No calls, alerts, location or medical services.
@@ -61,6 +70,10 @@ class FamilyDemoData extends ChangeNotifier {
     FamilyResident(
       id: '12346',
       name: 'Eleanor Tay',
+      sampleLatitude: 5.4180,
+      sampleLongitude: 100.3340,
+      zoneLatitude: 5.4170,
+      zoneLongitude: 100.3330,
       unit: 'B-305',
       details: 'Sample resident',
       address: 'Unit B-305',
@@ -107,7 +120,30 @@ class FamilyDemoData extends ChangeNotifier {
   }
 
   void setRadius(FamilyResident resident, double value) {
-    resident.radius = value;
+    setSafeZone(resident, resident.zoneLatitude, resident.zoneLongitude, value);
+  }
+
+  void setSafeZone(
+    FamilyResident resident,
+    double latitude,
+    double longitude,
+    double radius,
+  ) {
+    if (!residents.contains(resident) ||
+        !latitude.isFinite ||
+        !longitude.isFinite ||
+        !radius.isFinite ||
+        latitude < -85 ||
+        latitude > 85 ||
+        longitude < -180 ||
+        longitude > 180 ||
+        radius < 100 ||
+        radius > 2000) {
+      throw ArgumentError('Invalid demo safe-zone values.');
+    }
+    resident.zoneLatitude = latitude;
+    resident.zoneLongitude = longitude;
+    resident.radius = radius;
     notifyListeners();
   }
 
