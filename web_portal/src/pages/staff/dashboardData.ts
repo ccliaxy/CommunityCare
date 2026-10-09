@@ -4,7 +4,7 @@ export type DashboardData = {
   residencies: { id: string; elderly_id: string; unit_id: string; starts_at: string; ends_at: string | null }[]
   users: { id: string; full_name: string; status: string }[]
   memberships: { id: string; staff_id: string; property_id: string }[]
-  tasks: { id: string; property_id: string; title: string; due_at: string; status: string; assigned_membership_id: string | null }[]
+  tasks: { id: string; property_id: string; title: string; due_at: string; status: string; assigned_membership_id: string | null; staff_name?: string | null }[]
   incidents: { id: string; property_id: string; incident_type: string; description: string; location: string | null; incident_time: string; status: string }[]
   alerts: { id: string; property_id: string; elderly_id: string; alert_type: string; alert_time: string; status: string }[]
 }

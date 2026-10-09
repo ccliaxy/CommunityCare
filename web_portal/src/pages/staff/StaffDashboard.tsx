@@ -24,6 +24,12 @@ export default function StaffDashboard({ onPage }: Props) {
   const [loading, setLoading] = useState(true)
   const [property, setProperty] = useState('')
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const [taskRevision, setTaskRevision] = useState(0)
+  useEffect(() => {
+    const reload = () => setTaskRevision(v => v + 1)
+    window.addEventListener('communitycare:tasks-changed', reload)
+    return () => window.removeEventListener('communitycare:tasks-changed', reload)
+  }, [])
   const request = useRef(0)
   useEffect(() => {
     const controller = new AbortController()
@@ -37,7 +43,7 @@ export default function StaffDashboard({ onPage }: Props) {
       if (!controller.signal.aborted && id === request.current) setError(reason instanceof Error ? reason.message : 'Unable to load dashboard.')
     }).finally(() => { if (!controller.signal.aborted && id === request.current) setLoading(false) })
     return () => controller.abort()
-  }, [])
+  }, [taskRevision])
   const now = loadedAt ?? new Date()
   const scope = <T extends { property_id: string }>(rows: T[]) => rows.filter(row => !property || row.property_id === property)
   const tasks = data ? scope(data.tasks).filter(t => dayKey(t.due_at) === dayKey(now)).sort((a, b) => a.due_at.localeCompare(b.due_at)) : []
@@ -77,7 +83,7 @@ export default function StaffDashboard({ onPage }: Props) {
             <div className="sd-table-wrap"><table><thead><tr><th>Task</th><th>Assignee</th><th>Property</th><th>Due</th><th>Status</th></tr></thead><tbody>{tasks.map(t => {
               const member = data.memberships.find(m => m.id === t.assigned_membership_id)
               const assignee = member && data.users.find(u => u.id === member.staff_id)
-              return <tr key={t.id}><th scope="row">{t.title}</th><td>{t.assigned_membership_id ? assignee?.full_name ?? 'Name unavailable' : 'Unassigned'}</td><td>{data.properties.find(p => p.id === t.property_id)?.name ?? 'Unavailable'}</td><td>{formatTime(t.due_at)}</td><td><span className={`sd-badge ${badge(t.status)}`}>{label(t.status)}</span></td></tr>
+              return <tr key={t.id}><th scope="row">{t.title}</th><td>{t.assigned_membership_id ? t.staff_name ?? assignee?.full_name ?? 'Name unavailable' : 'Unassigned'}</td><td>{data.properties.find(p => p.id === t.property_id)?.name ?? 'Unavailable'}</td><td>{formatTime(t.due_at)}</td><td><span className={`sd-badge ${badge(t.status)}`}>{label(t.status)}</span></td></tr>
             })}{!tasks.length && <tr><td colSpan={5}>No tasks due today.</td></tr>}</tbody></table></div>
           </section>
           <section className="sd-card"><div className="sd-card-heading"><h2 className="sd-heading-accent">Residents Overview</h2><label className="sd-search"><StaffIcon name="search" /><input aria-label="Search residents" placeholder="Search residents…" value={search} onChange={e => setSearch(e.target.value)} /></label></div>

@@ -1,3 +1,4 @@
+import '../../tasks/care_tasks_page.dart';
 import 'package:flutter/material.dart';
 import 'elderly_activity_page.dart';
 import 'elderly_demo_data.dart';
@@ -147,6 +148,11 @@ class _ElderlyShellState extends State<ElderlyShell> {
                 ],
               ),
               actions: [
+                if (widget.accountName != null) IconButton(
+                  tooltip: 'Care tasks',
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const CareTasksPage())),
+                  icon: const Icon(Icons.assignment_outlined),
+                ),
                 IconButton(
                   tooltip: 'Activity notifications',
                   key: const ValueKey('notifications'),

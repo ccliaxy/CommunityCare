@@ -1,3 +1,4 @@
+import '../../tasks/care_tasks_page.dart';
 import 'package:flutter/material.dart';
 import 'family_demo_data.dart';
 import 'family_elderly_page.dart';
@@ -53,6 +54,11 @@ class _FamilyShellState extends State<FamilyShell> {
           backgroundColor: familyCream,
           surfaceTintColor: Colors.transparent,
           titleSpacing: 20,
+          actions: [if (widget.accountName != null) IconButton(
+                  tooltip: 'Care tasks',
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const CareTasksPage())),
+                  icon: const Icon(Icons.assignment_outlined),
+                ),],
           title: Row(
             children: [
               if (_index == 0) ...[

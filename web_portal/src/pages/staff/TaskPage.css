@@ -178,3 +178,7 @@
     }
 }
 
+
+.tk-actions input[type="date"]{border:1px solid #c5d3cb;border-radius:5px;padding:10px;min-height:42px;font:inherit;background:white}
+.tk-app .tk-share{display:flex;align-items:flex-start;gap:10px}
+.tk-app .tk-share input{width:auto;flex-shrink:0;margin-top:3px}
