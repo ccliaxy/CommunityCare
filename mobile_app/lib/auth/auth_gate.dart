@@ -1,3 +1,4 @@
+import '../devices/device_registration_scope.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -117,10 +118,14 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
         key: ValueKey('${profile.id}:${profile.role}'),
         onGenerateRoute: (_) => MaterialPageRoute<void>(
           builder: (_) => profile.role == 'elderly'
-              ? ElderlyShell(
-                  showInitialInvitation: false,
-                  onLogout: () => unawaited(_auth.signOut()),
-                  accountName: profile.name,
+              ? DeviceRegistrationScope(
+                  key: ValueKey(profile.id),
+                  userId: profile.id,
+                  child: ElderlyShell(
+                    showInitialInvitation: false,
+                    onLogout: () => unawaited(_auth.signOut()),
+                    accountName: profile.name,
+                  ),
                 )
               : FamilyShell(
                   onLogout: () => unawaited(_auth.signOut()),

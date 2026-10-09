@@ -1,3 +1,4 @@
+import { subscribeAlerts } from '../../lib/alertSocket'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { readAlerts } from './alertRepository'
 import type { LiveAlert } from './alertData'
@@ -26,5 +27,12 @@ export function useDatabaseAlerts() {
     }
   }, [])
   useEffect(() => { void refreshAlerts(); return () => request.current?.abort() }, [refreshAlerts])
+  useEffect(() => {
+    let closed = false
+    let cleanup: (() => void) | undefined
+    void subscribeAlerts(() => { void refreshAlerts() }).then(stop => { if (closed) stop(); else cleanup = stop })
+      .catch(() => { /* Manual Refresh remains available when Socket.IO is unavailable. */ })
+    return () => { closed = true; cleanup?.() }
+  }, [refreshAlerts])
   return { alerts, alertsLoading, alertsError, alertsUpdatedAt, refreshAlerts }
 }

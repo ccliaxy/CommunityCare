@@ -1,127 +1,98 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import StaffIcon from './StaffIcon'
 import type { StaffIconName } from './StaffIcon'
 import { usePortal } from './PortalContext'
-import { initialAlerts, initialTasks, residents, incidentWeek, incidentCategories, incidentColors, categoryTotals, weekTotal } from './staffDemoData'
-import type { Task } from './staffDemoData'
+import { readDashboard } from './dashboardRepository'
+import { currentResidents, dayKey, incidentTrend, zone } from './dashboardData'
+import type { DashboardData } from './dashboardData'
 import './StaffDashboard.css'
 
-type Modal = { kind: 'info'; title: string; message: string } | { kind: 'task' } | { kind: 'logout' } | null
+type Props = { onLogout: () => void; onResidents?: () => void; onTasks?: () => void; onPage?: (page: string) => void }
 const quickActions: { label: string; icon: StaffIconName }[] = [
   { label: 'New Task', icon: 'tasks' }, { label: 'Register Staff', icon: 'staff' },
   { label: 'Add Resident', icon: 'residents' }, { label: 'Log Incident', icon: 'incidents' },
   { label: 'Generate Report', icon: 'reports' }, { label: 'Send Alert', icon: 'alerts' },
   { label: 'Assign Shift', icon: 'shift' }, { label: 'Create Maintenance', icon: 'maintenance' },
 ]
-
-function DashboardDialog({ modal, onClose, onCreate, onLogout }: {
-  modal: NonNullable<Modal>; onClose: () => void; onCreate: (task: Task) => void; onLogout: () => void
-}) {
-  const ref = useRef<HTMLDialogElement>(null)
-  const titleId = useId()
-  const [error, setError] = useState('')
-  useEffect(() => { const node = ref.current; node?.showModal(); return () => node?.close() }, [])
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const form = new FormData(event.currentTarget)
-    const description = String(form.get('description') ?? '').trim()
-    const location = String(form.get('location') ?? '').trim()
-    if (!description || !location) { setError('Enter a task description and location.'); return }
-    onCreate({ id: crypto.randomUUID(), description, location, assignee: String(form.get('assignee') || 'Unassigned'), status: 'Pending' })
-    onClose()
-  }
-  return <dialog ref={ref} className="sd-dialog" aria-labelledby={titleId} onCancel={onClose}>
-    <h2 id={titleId}>{modal.kind === 'task' ? 'Create Task' : modal.kind === 'logout' ? 'Leave staff preview?' : modal.title}</h2>
-    {modal.kind === 'task' ? <form onSubmit={submit}>
-      <p>Saved only for this preview session.</p>
-      <label>Task description<input name="description" required maxLength={160} autoFocus /></label>
-      <label>Assignee<select name="assignee" defaultValue="Unassigned"><option>Unassigned</option><option>Nurse Joy</option><option>Bob Builder</option></select></label>
-      <label>Location<input name="location" required maxLength={100} /></label>
-      {error && <p role="alert" className="sd-error">{error}</p>}
-      <div className="sd-dialog-actions"><button type="button" onClick={onClose}>Cancel</button><button className="sd-primary" type="submit">Create task</button></div>
-    </form> : <>
-      <p>{modal.kind === 'logout' ? 'Your sample task changes and alert acknowledgements will be reset.' : modal.message}</p>
-      <div className="sd-dialog-actions"><button type="button" autoFocus onClick={onClose}>{modal.kind === 'logout' ? 'Stay' : 'Close'}</button>
-        {modal.kind === 'logout' && <button type="button" className="sd-primary" onClick={onLogout}>Leave preview</button>}</div>
-    </>}
-  </dialog>
-}
-
-export default function StaffDashboard({ onLogout, onResidents, onTasks, onPage }: { onLogout: () => void; onResidents?: () => void; onTasks?: () => void; onPage?: (page: string) => void }) {
-  const [tasks, setTasks] = useState<Task[]>(() => initialTasks.map((task) => ({ ...task })))
-  const [alerts, setAlerts] = useState(() => initialAlerts.map((alert) => ({ ...alert })))
+const badge = (status: string) => status === 'completed' || status === 'resolved' || status === 'closed' ? 'sd-completed' : status === 'active' ? 'sd-active' : status === 'missed' ? 'sd-missed' : 'sd-pending'
+const label = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())
+const formatTime = (value: string) => new Date(value).toLocaleString('en-MY', { timeZone: zone })
+export default function StaffDashboard({ onPage }: Props) {
   const { search, setSearch } = usePortal()
-  const [notice, setNotice] = useState('')
-  const [modal, setModal] = useState<Modal>(null)
-  const searchInput = useRef<HTMLInputElement>(null)
-  const visibleResidents = residents.filter((resident) => [resident.name, resident.unit, resident.careLevel, resident.status].join(' ').toLowerCase().includes(search.trim().toLowerCase()))
-  const newAlerts = alerts.filter((alert) => !alert.acknowledged).length
-
-  function planned(title: string) {
-    const destination: Record<string, string> = { 'Register Staff': 'staff', 'Log Incident': 'incidents', 'Send Alert': 'alerts', 'Assign Shift': 'staff', 'Create Maintenance': 'tasks', 'Staff': 'staff' };
-    if (destination[title] && onPage) { onPage(destination[title]); return }
-    setModal({ kind: 'info', title, message: `${title} is planned for a separate module. This dashboard preview does not create accounts, send messages or change real records.` })
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [property, setProperty] = useState('')
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const request = useRef(0)
+  useEffect(() => {
+    const controller = new AbortController()
+    const id = ++request.current
+    setLoading(true); setError(''); setData(null)
+    readDashboard(controller.signal).then(next => {
+      if (id !== request.current || controller.signal.aborted) return
+      setData(next); setLoadedAt(new Date())
+      setProperty(old => next.properties.some(p => p.id === old) ? old : '')
+    }).catch(reason => {
+      if (!controller.signal.aborted && id === request.current) setError(reason instanceof Error ? reason.message : 'Unable to load dashboard.')
+    }).finally(() => { if (!controller.signal.aborted && id === request.current) setLoading(false) })
+    return () => controller.abort()
+  }, [])
+  const now = loadedAt ?? new Date()
+  const scope = <T extends { property_id: string }>(rows: T[]) => rows.filter(row => !property || row.property_id === property)
+  const tasks = data ? scope(data.tasks).filter(t => dayKey(t.due_at) === dayKey(now)).sort((a, b) => a.due_at.localeCompare(b.due_at)) : []
+  const residents = data ? currentResidents(data, property, now) : []
+  const filtered = residents.filter(r => `${r.name} ${r.unit} ${r.property} ${r.status}`.toLowerCase().includes(search.trim().toLowerCase()))
+  const alerts = data ? scope(data.alerts).filter(a => ['open', 'acknowledged'].includes(a.status)).sort((a, b) => b.alert_time.localeCompare(a.alert_time)) : []
+  const incidents = data ? scope(data.incidents).sort((a, b) => b.incident_time.localeCompare(a.incident_time)) : []
+  const trend = incidentTrend(incidents, now)
+  const maximum = Math.max(5, ...trend.current.map(d => d.count))
+  function exportSummary() {
+    if (!data) return
+    const rows = [['Metric', 'Value'], ['Residents', String(residents.length)], ['Tasks due today', String(tasks.length)], ['Unresolved alerts', String(alerts.length)], ['Incidents in last 7 calendar days', String(trend.total)], ['Previous 7 calendar days', String(trend.previousTotal)], ['Timezone', zone], ['Snapshot', now.toISOString()], ...trend.current.map(d => [d.day, String(d.count)])]
+    const csv = rows.map(row => row.map(value => `"${value.replaceAll('"', '""')}"`).join(',')).join('\r\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a'); link.href = url; link.download = 'communitycare-dashboard.csv'; link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
   }
-  function report() {
-    const lines = ['CommunityCare Staff Preview Report', 'Sample data only - not a live operational report',
-      `Residents,${residents.length}`, `Tasks,${tasks.length}`, `Completed tasks,${tasks.filter((task) => task.status === 'Completed').length}`,
-      `Unacknowledged sample alerts,${newAlerts}`, `Sample week incidents,${weekTotal}`,
-      ...incidentCategories.map((category, index) => `${category},${categoryTotals[index]}`)]
-    const url = URL.createObjectURL(new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }))
-    const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'communitycare-sample-report.csv'; anchor.click()
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-    setNotice('Sample summary exported as CSV. It contains demonstration data only.')
-  }
-  function quick(label: string) { if (label === 'New Task') { if (onTasks) onTasks(); else setModal({ kind: 'task' }) } else if (label === 'Generate Report') report(); else if (label === 'Add Resident' && onResidents) onResidents(); else planned(label) }
-
-  return <div id="staff-top" tabIndex={-1}>
-      {notice && <div className="sd-notice" role="status"><span>{notice}</span><button type="button" aria-label="Dismiss message" onClick={() => setNotice('')}>×</button></div>}
-      <main id="staff-main" tabIndex={-1} className="sd-dashboard">
+  return <div id="staff-top" className="sd-live-dashboard">
+    {error && <p className="sd-error" role="alert">Could not load dashboard: {error}. Reload the browser page to retry.</p>}
+    {loading && <p role="status">Loading records…</p>}
+    {data && !loading && <>
+      <label className="sd-db-filter">Property <select value={property} onChange={e => setProperty(e.target.value)}><option value="">All accessible properties</option>{data.properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      {!data.properties.length && <p className="sd-notice">No accessible properties. Check your active staff membership.</p>}
+      <main className="sd-dashboard" id="staff-main">
         <div className="sd-left-column">
-          <section className="sd-card sd-alert-card" id="staff-alerts" tabIndex={-1} aria-labelledby="sd-alert-title">
-            <div className="sd-card-heading"><h2 id="sd-alert-title"><StaffIcon name="alerts" />Urgent Alerts</h2><span className="sd-badge sd-missed">{newAlerts} New</span></div>
-            {alerts.map((alert) => <article className="sd-alert-item" key={alert.id}>
-              <h3>{alert.title}</h3><p>{alert.detail}</p><p className="sd-event-time">{alert.time}</p>
-              <div className="sd-alert-actions"><button type="button" onClick={() => setModal({ kind: 'info', title: alert.title, message: `${alert.detail}. ${alert.time}. This is a sample event; no real emergency response has been initiated.` })}>View details</button>
-                <button type="button" disabled={alert.acknowledged} onClick={() => { setAlerts((old) => old.map((item) => item.id === alert.id ? { ...item, acknowledged: true } : item)); setNotice('Alert acknowledged in this preview. It is not resolved and nobody was notified.') }}>{alert.acknowledged ? 'Acknowledged' : 'Acknowledge'}</button></div>
-            </article>)}
+          <section className="sd-card sd-alert-card"><div className="sd-card-heading"><h2><StaffIcon name="alerts" />Urgent Alerts</h2><span className="sd-badge sd-missed">{alerts.length} Unresolved</span></div>
+            {!alerts.length && <p>No unresolved alerts.</p>}
+            {alerts.slice(0, 10).map(a => <article className="sd-alert-item" key={a.id}><h3>{label(a.alert_type)} · {data.users.find(u => u.id === a.elderly_id)?.full_name ?? 'Name unavailable'}</h3><p>{formatTime(a.alert_time)}</p><p className="sd-event-time">{label(a.status)}</p><div className="sd-alert-actions"><button disabled={!onPage} onClick={() => onPage?.('alerts')}>View alerts</button><button disabled title="Acknowledgement is not connected yet">{a.status === 'acknowledged' ? 'Acknowledged' : 'Acknowledge'}</button></div></article>)}
+            {alerts.length > 10 && <p>Showing the latest 10 of {alerts.length} unresolved alerts.</p>}
+            
+            <p className="sd-muted">Acknowledgement is not available here yet.</p>
           </section>
-          <section className="sd-card"><h2>Quick Actions</h2><div className="sd-quick-grid">{quickActions.map((action) => <button type="button" key={action.label} onClick={() => quick(action.label)}><StaffIcon name={action.icon} /><span>{action.label}</span></button>)}</div></section>
+          <section className="sd-card"><h2>Quick Actions</h2><div className="sd-quick-grid">{quickActions.map(action => <button key={action.label} disabled={action.label !== 'Generate Report'} title={action.label === 'Generate Report' ? 'Export current dashboard summary' : 'Not available yet'} onClick={exportSummary}><StaffIcon name={action.icon} /><span>{action.label}</span></button>)}</div><p className="sd-muted">Greyed-out actions are not available yet.</p></section>
         </div>
         <div className="sd-right-column">
-          <section className="sd-card" id="staff-tasks" tabIndex={-1} aria-labelledby="sd-task-title">
-            <div className="sd-card-heading"><h2 id="sd-task-title" className="sd-heading-accent">Daily Tasks</h2><button type="button" className="sd-primary" onClick={() => setModal({ kind: 'task' })}><StaffIcon name="plus" />Create Task</button></div>
-            <div className="sd-table-wrap" role="region" aria-label="Daily tasks table" tabIndex={0}><table><thead><tr><th>Task Description</th><th>Assignee</th><th>Location</th><th>Status</th></tr></thead><tbody>
-              {tasks.map((task) => <tr key={task.id} className={task.status === 'Missed' ? 'sd-missed-row' : ''}><th scope="row">{task.description}</th><td>{task.assignee}</td><td>{task.location}</td><td><span className={`sd-badge sd-${task.status.toLowerCase()}`}>{task.status}</span>
-                {task.status === 'Pending' && <button type="button" className="sd-complete" aria-label={`Complete ${task.description}`} onClick={() => { setTasks((old) => old.map((item) => item.id === task.id ? { ...item, status: 'Completed' } : item)); setNotice('Task completed in this demo session.') }}>Complete</button>}
-              </td></tr>)}
-            </tbody></table></div>
+          <section className="sd-card"><div className="sd-card-heading"><h2 className="sd-heading-accent">Daily Tasks</h2><button className="sd-primary" disabled title="Task creation is not connected yet"><StaffIcon name="plus" />Create Task</button></div><p>Due {dayKey(now)} · {zone}</p>
+            <div className="sd-table-wrap"><table><thead><tr><th>Task</th><th>Assignee</th><th>Property</th><th>Due</th><th>Status</th></tr></thead><tbody>{tasks.map(t => {
+              const member = data.memberships.find(m => m.id === t.assigned_membership_id)
+              const assignee = member && data.users.find(u => u.id === member.staff_id)
+              return <tr key={t.id}><th scope="row">{t.title}</th><td>{t.assigned_membership_id ? assignee?.full_name ?? 'Name unavailable' : 'Unassigned'}</td><td>{data.properties.find(p => p.id === t.property_id)?.name ?? 'Unavailable'}</td><td>{formatTime(t.due_at)}</td><td><span className={`sd-badge ${badge(t.status)}`}>{label(t.status)}</span></td></tr>
+            })}{!tasks.length && <tr><td colSpan={5}>No tasks due today.</td></tr>}</tbody></table></div>
           </section>
-          <section className="sd-card" id="staff-residents" tabIndex={-1} aria-labelledby="sd-resident-title">
-            <div className="sd-card-heading"><h2 id="sd-resident-title" className="sd-heading-accent">Residents Overview</h2><label className="sd-search"><StaffIcon name="search" /><input ref={searchInput} type="search" aria-label="Filter residents" placeholder="Search residents..." value={search} onChange={(event) => setSearch(event.target.value)} /></label></div>
-            <div className="sd-table-wrap" role="region" aria-label="Residents table" tabIndex={0}><table><thead><tr><th>Name</th><th>Unit</th><th>Care Level</th><th>Status</th></tr></thead><tbody>
-              {visibleResidents.map((resident) => <tr key={resident.id}><th scope="row"><span className="sd-resident-name"><span className={`sd-avatar ${resident.status === 'Monitoring' ? 'sd-avatar-alert' : ''}`}>{resident.initials}</span>{resident.name}</span></th><td>{resident.unit}</td><td>{resident.careLevel}</td><td><span className={`sd-badge ${resident.status === 'Monitoring' ? 'sd-missed' : 'sd-active'}`}>{resident.status}</span></td></tr>)}
-              {visibleResidents.length === 0 && <tr><td colSpan={4} className="sd-empty">No residents found. Try a name, unit or care level.</td></tr>}
-            </tbody></table></div>
-            <p className="sd-results" aria-live="polite">{visibleResidents.length} of {residents.length} sample residents</p>
+          <section className="sd-card"><div className="sd-card-heading"><h2 className="sd-heading-accent">Residents Overview</h2><label className="sd-search"><StaffIcon name="search" /><input aria-label="Search residents" placeholder="Search residents…" value={search} onChange={e => setSearch(e.target.value)} /></label></div>
+            <div className="sd-table-wrap"><table><thead><tr><th>Name</th><th>Unit</th><th>Property</th><th>Account status</th></tr></thead><tbody>{filtered.map(r => <tr key={r.id}><th scope="row"><span className="sd-resident-name"><span className="sd-avatar">{r.name.split(/\s+/).slice(0, 2).map(part => part[0]).join('')}</span>{r.name}</span></th><td>{r.unit}</td><td>{r.property}</td><td><span className={`sd-badge ${badge(r.status)}`}>{label(r.status)}</span></td></tr>)}{!filtered.length && <tr><td colSpan={4}>No matching current residents.</td></tr>}</tbody></table></div><p className="sd-results">{filtered.length} of {residents.length} current residents</p>
           </section>
-          <section className="sd-card" id="staff-trends" tabIndex={-1} aria-labelledby="sd-trend-title">
-            <div className="sd-heading-accent"><h2 id="sd-trend-title">Weekly Incident Trends</h2><p className="sd-chart-description">Sample week: {weekTotal} incidents · <span>↓ {Math.round((17 - weekTotal) / 17 * 100)}% from previous sample week (17)</span></p></div>
-            <div className="sd-chart-frame"><div className="sd-chart" role="img" aria-label={`Sample incidents from Monday to Sunday: ${incidentWeek.map((day) => `${day.day} ${day.counts.reduce((a, b) => a + b, 0)}`).join(', ')}. Total ${weekTotal}.`}>
-              <div className="sd-chart-y" aria-hidden="true">{[5, 4, 3, 2, 1, 0].map((n) => <span key={n}>{n}</span>)}</div>
-              <div className="sd-chart-bars" aria-hidden="true">{incidentWeek.map((day) => <div className="sd-bar-column" key={day.day}><div className="sd-bar-stack">{day.counts.map((value, i) => <div key={i} style={{ height: `${value / 5 * 100}%`, backgroundColor: incidentColors[i] }} />)}</div><span>{day.day}</span></div>)}</div>
-            </div><div className="sd-chart-legend">{incidentCategories.map((category, i) => <span key={category}><i style={{ backgroundColor: incidentColors[i] }} />{category} ({categoryTotals[i]})</span>)}</div></div>
-            <details className="sd-chart-data"><summary>View chart data</summary><div className="sd-table-wrap"><table><thead><tr><th>Day</th>{incidentCategories.map((category) => <th key={category}>{category}</th>)}</tr></thead><tbody>{incidentWeek.map((day) => <tr key={day.day}><th scope="row">{day.day}</th>{day.counts.map((count, i) => <td key={i}>{count}</td>)}</tr>)}</tbody></table></div></details>
+          <section className="sd-card"><div className="sd-heading-accent"><h2>Weekly Incident Trends</h2><p className="sd-chart-description">{trend.total} incidents · Previous 7 days: {trend.previousTotal}. Today is a partial day.</p></div><p className="sd-muted">Counts use incident records, not emergency alerts.</p>
+            <div className="sd-chart-frame"><div className="sd-chart" role="img" aria-label={trend.current.map(d => `${d.day}: ${d.count}`).join(', ')}>
+              <div className="sd-chart-y" aria-hidden="true">{Array.from({ length: 6 }, (_, i) => <span key={i}>{Math.ceil(maximum / 5) * (5 - i)}</span>)}</div>
+              <div className="sd-chart-bars" aria-hidden="true">{trend.current.map(d => <div className="sd-bar-column" key={d.day}><div className="sd-bar-stack"><div style={{ height: `${d.count / (Math.ceil(maximum / 5) * 5) * 100}%`, backgroundColor: '#42a5f5' }} /></div><span>{d.day.slice(5)}</span></div>)}</div>
+            </div><div className="sd-chart-legend"><span><i style={{ backgroundColor: '#42a5f5' }} />Recorded incidents ({trend.total})</span></div></div>
+            <details className="sd-chart-data"><summary>View chart data</summary><table><thead><tr><th>Date ({zone})</th><th>Incidents</th></tr></thead><tbody>{trend.current.map(d => <tr key={d.day}><td>{d.day}</td><td>{d.count}</td></tr>)}</tbody></table></details>
           </section>
-          <section className="sd-card" id="staff-incidents" tabIndex={-1} aria-labelledby="sd-incident-title"><h2 id="sd-incident-title">Recent Incidents</h2><p className="sd-muted">Sample events matching the alert panel. Acknowledging an alert does not resolve an incident.</p>
-            {alerts.map((alert) => <div className="sd-recent-incident" key={alert.id}><div><strong>{alert.title}</strong><p>{alert.detail}</p></div><span className="sd-badge sd-pending">Open</span></div>)}
-          </section>
+          <section className="sd-card"><h2>Recent Incidents</h2><p className="sd-muted">Latest 10 records in the selected scope.</p>{!incidents.length && <p>No incidents recorded.</p>}{incidents.slice(0, 10).map(i => <article className="sd-recent-incident" key={i.id}><div><strong>{i.incident_type}</strong><p>{i.description}</p><p>{i.location ?? 'Location not recorded'} · {formatTime(i.incident_time)}</p></div><span className={`sd-badge ${badge(i.status)}`}>{label(i.status)}</span></article>)}</section>
         </div>
       </main>
-    {modal && <DashboardDialog modal={modal} onClose={() => setModal(null)} onCreate={(task) => { setTasks((old) => [...old, task]); setNotice('Task created for this demo session.'); }} onLogout={onLogout} />}
+    </>}
   </div>
 }
-
-
-

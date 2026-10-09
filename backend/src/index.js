@@ -1,36 +1,13 @@
-// src/index.js
 require('dotenv').config();
-const express = require('express');
-const http = require('http');
-const cors = require('cors');
-const { Server } = require('socket.io');
-
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*' } // Open everything up during the development phase, then tighten it later.
-});
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// test route
-app.get('/', (req, res) => {
-  res.json({ message: 'CommunityCare backend is running' });
-});
-
-// Socket.IO testinf
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
-  });
-});
-
-// start
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+const http=require('http');
+const {Server}=require('socket.io');
+const {createGateway}=require('./config/supabase');
+const {createApp}=require('./app');
+const {attachAlerts}=require('./sockets/alerts');
+const db=createGateway(process.env);
+const origins=(process.env.ALLOWED_ORIGINS??'').split(',').map(s=>s.trim()).filter(Boolean);
+if(!origins.length) throw new Error('Set ALLOWED_ORIGINS in backend/.env');
+const server=http.createServer(createApp(db,process.env));
+const io=new Server(server,{cors:{origin:origins},allowRequest(req,callback){callback(null,!req.headers.origin||origins.includes(req.headers.origin));}});
+attachAlerts(io,db);
+server.listen(Number(process.env.PORT||5000),()=>console.log(`CommunityCare Express listening on port ${process.env.PORT||5000}`));

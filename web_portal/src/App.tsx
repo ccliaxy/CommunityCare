@@ -1,16 +1,4 @@
-// import { useState } from 'react'
-// import LoginPage from './pages/LoginPage'
-// import StaffPortal from './pages/staff/StaffPortal'
-// import AdminPortal from './pages/admin/AdminPortal'
-
-// export default function App() {
-//   const [preview, setPreview] = useState<'staff' | 'admin' | null>(null)
-//   const logout = () => { setPreview(null); window.scrollTo(0, 0) }
-//   if (preview === 'staff') return <StaffPortal onLogout={logout} />
-//   if (preview === 'admin') return <AdminPortal onLogout={logout} />
-//   return <><div className="sd-preview-entry"><span>Frontend preview · Authentication is not connected</span><button onClick={() => setPreview('staff')}>Open Staff Dashboard preview</button><button onClick={() => setPreview('admin')}>Open Admin Dashboard preview</button></div><LoginPage /></>
-// }
-
+import ResidentPasswordPage from './pages/ResidentPasswordPage'
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import LoginPage from './pages/LoginPage'
 import StaffPortal from './pages/staff/StaffPortal'
@@ -28,10 +16,11 @@ function ConnectedApp({ client }: { client: SupabaseClient }) {
   if (state.status === 'blocked') return <main className="cc-auth-status"><h1>Account access</h1><p role="alert">{state.error}</p><div><button onClick={auth.retry}>Retry verification</button><button onClick={() => void auth.signOut()}>Sign out</button></div></main>
   if (state.status === 'signed_out') return <LoginPage onSignIn={auth.signIn} busy={state.busy} authError={state.error} />
   const logout = () => { void auth.signOut(); window.scrollTo(0, 0) }
-  return <><div className="cc-session-banner"><span>Signed in as <strong>{state.profile.full_name}</strong> · {state.profile.role === 'system_admin' ? 'System Admin' : 'Property Staff'} · Login is live; dashboard data is still a demo.</span><button onClick={logout}>Sign out</button></div>
+  return <><div className="cc-session-banner"><span>Signed in as <strong>{state.profile.full_name}</strong> · {state.profile.role === 'system_admin' ? 'System Admin' : 'Property Staff'} · Signed in securely.</span><button onClick={logout}>Sign out</button></div>
     {state.profile.role === 'system_admin' ? <AdminPortal key={state.profile.id} onLogout={logout} /> : <StaffPortal key={state.profile.id} onLogout={logout} />}
   </>
 }
 export default function App() {
+  if (new URLSearchParams(window.location.search).get('setup') === 'resident') return <ResidentPasswordPage />
   return supabase ? <ConnectedApp client={supabase} /> : <main className="cc-auth-status"><h1>Supabase configuration needed</h1><p role="alert">{configurationError}</p><p>Keep server secret keys out of this web application.</p></main>
 }
