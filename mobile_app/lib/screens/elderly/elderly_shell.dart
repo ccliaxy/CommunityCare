@@ -1,3 +1,4 @@
+import '../../alerts/alerts_page.dart';
 import '../../tasks/care_tasks_page.dart';
 import 'package:flutter/material.dart';
 import 'elderly_activity_page.dart';
@@ -148,6 +149,11 @@ class _ElderlyShellState extends State<ElderlyShell> {
                 ],
               ),
               actions: [
+if (widget.accountName != null) IconButton(
+                  tooltip: 'Emergency alerts',
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MobileAlertsPage())),
+                  icon: const Icon(Icons.notification_important_outlined),
+                ),
                 if (widget.accountName != null) IconButton(
                   tooltip: 'Care tasks',
                   onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const CareTasksPage())),
@@ -185,7 +191,7 @@ class _ElderlyShellState extends State<ElderlyShell> {
                         Text(
                           widget.accountName == null
                               ? 'UI preview · Sample data'
-                              : 'Signed in: ${widget.accountName} · Sample data',
+                              : 'Signed in: ${widget.accountName} · SOS, tasks & alerts connected; other sections are samples',
                           style: TextStyle(fontSize: 13, color: careGreen),
                         ),
                         TextButton.icon(

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import './AlertLocationMap.css'
@@ -10,7 +10,8 @@ export default function AlertLocationMap({ alert }: { alert: AlertRecord }) {
   const mapRef = useRef<L.Map | null>(null)
   const [tileError, setTileError] = useState(false)
   const [visible, setVisible] = useState(false)
-  const coordinates = alert.coordinates
+  const latitude = alert.coordinates?.[0], longitude = alert.coordinates?.[1]
+  const coordinates = useMemo<[number, number] | null>(() => latitude === undefined || longitude === undefined ? null : [latitude, longitude], [latitude, longitude])
 
   useEffect(() => {
     if (!host.current) return

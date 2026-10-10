@@ -1,3 +1,4 @@
+import '../../alerts/alerts_page.dart';
 import '../../tasks/care_tasks_page.dart';
 import 'package:flutter/material.dart';
 import 'family_demo_data.dart';
@@ -54,7 +55,12 @@ class _FamilyShellState extends State<FamilyShell> {
           backgroundColor: familyCream,
           surfaceTintColor: Colors.transparent,
           titleSpacing: 20,
-          actions: [if (widget.accountName != null) IconButton(
+          actions: [
+if (widget.accountName != null) IconButton(
+                  tooltip: 'Emergency alerts',
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MobileAlertsPage())),
+                  icon: const Icon(Icons.notification_important_outlined),
+                ),if (widget.accountName != null) IconButton(
                   tooltip: 'Care tasks',
                   onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const CareTasksPage())),
                   icon: const Icon(Icons.assignment_outlined),
@@ -106,7 +112,7 @@ class _FamilyShellState extends State<FamilyShell> {
                 child: Text(
                   widget.accountName == null
                       ? 'Family UI preview · Sample data'
-                      : 'Signed in: ${widget.accountName} · Family pages still use sample data',
+                      : 'Signed in: ${widget.accountName} · Tasks & alerts connected; other sections are samples',
                   style: TextStyle(fontSize: 13, color: familyGreen),
                 ),
               ),

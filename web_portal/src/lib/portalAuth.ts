@@ -60,9 +60,10 @@ export function createPortalAuth(client: SupabaseClient) {
       void verify()
       const onFocus = () => { if (state.status === 'signed_in') void verify() }
       window.addEventListener('focus', onFocus)
+      window.addEventListener('communitycare:profile-changed', onFocus)
       return () => {
         active = false; ++revision; subscription.unsubscribe()
-        timers.forEach(clearTimeout); window.removeEventListener('focus', onFocus)
+        timers.forEach(clearTimeout); window.removeEventListener('focus', onFocus); window.removeEventListener('communitycare:profile-changed', onFocus)
       }
     },
     async signIn(email: string, password: string) {

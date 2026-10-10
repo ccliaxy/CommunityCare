@@ -7,6 +7,9 @@ export type LiveAlert = {
   id: string; name: string; unit: string; type: string; time: string;
   status: 'Active' | 'Pending' | 'Resolved' | 'Cancelled';
   responder: string; actions: string; notes: string;
+  revision: number; propertyName: string; assignedMembershipId: string | null;
+  acknowledgedAt: string | null; resolvedAt: string | null; cancelledAt: string | null; cancellationReason: string | null;
+  report: {incident_id: string; actions: string; notes: string; outcome: 'pending' | 'resolved'; updated_at: string} | null;
   coordinates: [number, number] | null; propertyId: string; source: string;
 }
 export function eventCoordinates(lat: DatabaseAlert['latitude'], lon: DatabaseAlert['longitude']): [number, number] | null {

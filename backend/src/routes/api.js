@@ -1,11 +1,16 @@
+const {createStaffProfileService}=require('../services/staffProfile');
+const {createStaffService}=require('../services/staff');
+const {createAlertService}=require('../services/alerts');
 const {createTaskService}=require('../services/tasks');
 const {registerDevice}=require('../services/devices');
 const {createUnitService}=require('../services/units');
 const express=require('express');
 const {createResidentService}=require('../services/residents');
-const {readDashboard,readAlerts}=require('../services/dashboard');
+const {readDashboard}=require('../services/dashboard');
 function createRoutes(db,env){
- const router=express.Router(), residents=createResidentService(db,env), tasks=createTaskService(db);
+ const router=express.Router(), residents=createResidentService(db,env), tasks=createTaskService(db), alerts=createAlertService(db);
+ router.get('/mobile/alerts',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly','family']);res.json(await alerts.mobile(actor));});
+ router.post('/mobile/alerts/sos',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly']);const result=await alerts.create(actor,req.body,true);res.status(result.replayed?200:201).json(result);});
  router.get('/mobile/tasks',async(req,res)=>{
   const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly','family']);
   res.json(await tasks.mobile(actor));
@@ -16,7 +21,11 @@ function createRoutes(db,env){
  });
  router.use(async(req,res,next)=>{req.actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1]);next();});
  router.get('/dashboard',async(req,res)=>res.json(await readDashboard(db,req.actor)));
- router.get('/alerts',async(req,res)=>res.json(await readAlerts(db,req.actor)));
+ router.use('/alerts',(req,res,next)=>req.actor.role==='property_staff'?next():res.status(403).json({error:'Property staff account required.'}));
+ router.get('/alerts',async(req,res)=>res.json(await alerts.list(req.actor)));
+ router.get('/alerts/options',async(req,res)=>res.json(await alerts.options(req.actor)));
+ router.post('/alerts',async(req,res)=>{const result=await alerts.create(req.actor,req.body);res.status(result.replayed?200:201).json(result);});
+ router.patch('/alerts/:id',async(req,res)=>res.json(await alerts.update(req.actor,req.params.id,req.body)));
  router.use('/residents',(req,res,next)=>req.actor.role==='property_staff'?next():res.status(403).json({error:'Property staff account required.'}));
  router.get('/residents',async(req,res)=>res.json(await residents.list(req.actor)));
  router.post('/residents',async(req,res)=>res.status(201).json(await residents.invite(req.actor,req.body)));
@@ -29,6 +38,15 @@ function createRoutes(db,env){
  router.get('/tasks',async(req,res)=>res.json(await tasks.list(req.actor)));
  router.post('/tasks',async(req,res)=>{const result=await tasks.create(req.actor,req.body);res.status(result.replayed?200:201).json(result);});
  router.patch('/tasks/:id',async(req,res)=>res.json(await tasks.update(req.actor,req.params.id,req.body)));
+ const staff=createStaffService(db,env);
+ router.use('/staff',(req,res,next)=>req.actor.role==='property_staff'?next():res.status(403).json({error:'Property staff account required.'}));
+ const profile=createStaffProfileService(db);
+ router.get('/staff/profile',async(req,res)=>res.json(await profile.read(req.actor)));
+ router.patch('/staff/profile',async(req,res)=>res.json(await profile.update(req.actor,req.body)));
+ router.get('/staff/options',async(req,res)=>res.json(await staff.options(req.actor)));
+ router.get('/staff',async(req,res)=>res.json(await staff.snapshot(req.actor,req.query)));
+ router.post('/staff/commands',async(req,res)=>res.json(await staff.command(req.actor,req.body)));
+ router.post('/staff/invitations',async(req,res)=>res.status(201).json(await staff.invite(req.actor,req.body)));
  return router;
 }
 module.exports={createRoutes};

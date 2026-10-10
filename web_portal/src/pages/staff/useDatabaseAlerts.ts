@@ -13,15 +13,15 @@ export function useDatabaseAlerts() {
     request.current?.abort()
     const current = new AbortController()
     request.current = current
-    setLoading(true); setError(''); setAlerts([]); setUpdatedAt('')
+    setLoading(true); setError('')
     try {
       const data = await readAlerts(current.signal)
       if (current.signal.aborted) return
-      setAlerts(data); setUpdatedAt(new Date().toISOString())
+      setAlerts(data); setUpdatedAt(new Date().toISOString()); window.dispatchEvent(new Event('communitycare:alerts-changed'))
     } catch (error) {
       if (current.signal.aborted) return
       const message = error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Could not load alerts.'
-      setError(message)
+      setError(message); setAlerts([]); setUpdatedAt('')
     } finally {
       if (!current.signal.aborted) setLoading(false)
     }
@@ -33,6 +33,12 @@ export function useDatabaseAlerts() {
     void subscribeAlerts(() => { void refreshAlerts() }).then(stop => { if (closed) stop(); else cleanup = stop })
       .catch(() => { /* Manual Refresh remains available when Socket.IO is unavailable. */ })
     return () => { closed = true; cleanup?.() }
+  }, [refreshAlerts])
+  useEffect(() => {
+    const tick = () => { if (!document.hidden) void refreshAlerts() }
+    const timer = window.setInterval(tick, 30000)
+    window.addEventListener('focus', tick)
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', tick) }
   }, [refreshAlerts])
   return { alerts, alertsLoading, alertsError, alertsUpdatedAt, refreshAlerts }
 }

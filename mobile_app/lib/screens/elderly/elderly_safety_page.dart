@@ -53,7 +53,7 @@ class ElderlySafetyPage extends StatelessWidget {
       const CareCard(
         color: Color(0xFFFFF0E8),
         child: Text(
-          'Preview mode: SOS and call buttons demonstrate the screens only. No alerts or calls are sent.',
+          'Confirming SOS sends an alert through your signed-in account. Contacts shown here are still samples; call buttons do not place calls.',
         ),
       ),
     ],

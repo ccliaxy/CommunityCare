@@ -28,7 +28,8 @@ export default function StaffDashboard({ onPage }: Props) {
   useEffect(() => {
     const reload = () => setTaskRevision(v => v + 1)
     window.addEventListener('communitycare:tasks-changed', reload)
-    return () => window.removeEventListener('communitycare:tasks-changed', reload)
+    window.addEventListener('communitycare:alerts-changed', reload)
+    return () => { window.removeEventListener('communitycare:tasks-changed', reload); window.removeEventListener('communitycare:alerts-changed', reload) }
   }, [])
   const request = useRef(0)
   useEffect(() => {

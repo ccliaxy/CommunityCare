@@ -1,11 +1,11 @@
 import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
 
-export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+export function Modal({ title, children, onClose, blockClose = false }: { title: string; children: ReactNode; onClose: () => void; blockClose?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null)
   const id = useId()
   useEffect(() => { const node = ref.current; node?.showModal(); return () => node?.close() }, [])
-  return <dialog ref={ref} className="sd-dialog pp-dialog" aria-labelledby={id} onCancel={onClose}><div className="pp-heading"><h2 id={id}>{title}</h2><button type="button" aria-label="Close dialog" onClick={onClose}>×</button></div>{children}</dialog>
+  return <dialog ref={ref} className="sd-dialog pp-dialog" aria-labelledby={id} onCancel={event => { if (blockClose) event.preventDefault(); else onClose() }}><div className="pp-heading"><h2 id={id}>{title}</h2><button type="button" aria-label="Close dialog" disabled={blockClose} onClick={onClose}>×</button></div>{children}</dialog>
 }
 export function Panel({ title, actions, children, className = '' }: { title: string; actions?: ReactNode; children: ReactNode; className?: string }) {
   return <section className={`pp-panel ${className}`}><div className="pp-heading"><h2>{title}</h2>{actions && <div className="pp-actions">{actions}</div>}</div>{children}</section>

@@ -1,3 +1,4 @@
+import StaffProfilePage from './StaffProfilePage'
 import { useEffect, useRef, useState } from 'react'
 import StaffIcon from './StaffIcon'
 import type { StaffIconName } from './StaffIcon'
@@ -15,6 +16,7 @@ import './StaffDashboard.css'
 import './Portal.css'
 
 const pages: { id: string; label: string; title: string; icon: StaffIconName; search: string }[] = [
+  { id: 'profile', label: 'My Profile', title: 'My Profile', icon: 'user', search: '' },
   { id: 'dashboard', label: 'Dashboard', title: 'CommunityCare Staff Dashboard', icon: 'dashboard', search: 'Search dashboard residents...' },
   { id: 'residents', label: 'Residents', title: 'Resident Management', icon: 'residents', search: 'Search residents...' },
   { id: 'tasks', label: 'Tasks', title: 'Task Management', icon: 'tasks', search: 'Search tasks...' },
@@ -29,34 +31,41 @@ function Shell({ onLogout }: { onLogout: () => void }) {
   const [page, setPage] = useState('dashboard')
   const [menu, setMenu] = useState(false)
   const [dialog, setDialog] = useState('')
+  const previousPage = useRef('dashboard')
+  const profileEdit = useRef({ dirty: false, busy: false })
   const heading = useRef<HTMLHeadingElement>(null)
   const info = pages.find(p => p.id === page)!
   function navigate(next: string) {
     const mapped = ({ 'staff-top': 'dashboard', 'staff-residents': 'residents', 'staff-tasks': 'tasks', 'staff-alerts': 'alerts', 'staff-incidents': 'incidents', 'staff-trends': 'reports' } as Record<string, string>)[next] || next
     if (!pages.some(p => p.id === mapped)) return
+    if (mapped === page) return
+    if (page === 'profile' && profileEdit.current.busy) return
+    if (page === 'profile' && profileEdit.current.dirty && !window.confirm('Discard your unsaved profile changes?')) return
+    if (mapped === 'profile') previousPage.current = page
     setPage(mapped); setSearch(''); setMenu(false); window.scrollTo(0, 0)
   }
   useEffect(() => { heading.current?.focus({ preventScroll: true }) }, [page])
   return <div className="sd-app pp-shell">
     <a className="sd-skip" href="#portal-content">Skip to page content</a>
     {menu && <button className="pp-scrim" aria-label="Close navigation" onClick={() => setMenu(false)} />}
-    <aside id="portal-navigation" className={`sd-sidebar ${menu ? 'sd-sidebar-open' : ''}`} aria-label="Staff portal"><div className="sd-brand"><img src={`${import.meta.env.BASE_URL}communitycare-logo.png`} alt="" width="38" height="38" /><div><strong>CommunityCare</strong><span>Staff Portal</span></div></div><nav aria-label="Staff portal navigation">{pages.map(p => <button type="button" key={p.id} className={page === p.id ? 'sd-nav-current' : ''} aria-current={page === p.id ? 'page' : undefined} onClick={() => navigate(p.id)}><StaffIcon name={p.icon} /><span>{p.label}</span></button>)}</nav><button className="sd-logout" onClick={() => setDialog('logout')}><StaffIcon name="logout" />Logout</button></aside>
-    <div className="sd-workspace"><header className="sd-header pp-header"><button type="button" className="sd-menu sd-icon-button" aria-label="Toggle navigation" aria-controls="portal-navigation" aria-expanded={menu} onClick={() => setMenu(!menu)}><StaffIcon name="menu" /></button><h1 ref={heading} tabIndex={-1}>{info.title}</h1><label className="sd-search"><StaffIcon name="search" /><input type="search" aria-label={info.search.replace('...', '')} placeholder={info.search} value={search} onChange={e => setSearch(e.target.value)} /></label><button className="sd-icon-button pp-bell" aria-label={`${alerts.filter(a => (a.status === 'Active' || a.status === 'Pending')).length} unresolved alerts`} onClick={() => navigate('alerts')}><StaffIcon name="alerts" /><span>{alerts.filter(a => (a.status === 'Active' || a.status === 'Pending')).length}</span></button><button className="sd-icon-button" aria-label="Staff account" onClick={() => setDialog('account')}><StaffIcon name="user" /></button></header>
-      {page !== 'dashboard' && page !== 'residents' && page !== 'tasks' && (
+    <aside id="portal-navigation" className={`sd-sidebar ${menu ? 'sd-sidebar-open' : ''}`} aria-label="Staff portal"><div className="sd-brand"><img src={`${import.meta.env.BASE_URL}communitycare-logo.png`} alt="" width="38" height="38" /><div><strong>CommunityCare</strong><span>Staff Portal</span></div></div><nav aria-label="Staff portal navigation">{pages.filter(p => p.id !== 'profile').map(p => <button type="button" key={p.id} className={page === p.id ? 'sd-nav-current' : ''} aria-current={page === p.id ? 'page' : undefined} onClick={() => navigate(p.id)}><StaffIcon name={p.icon} /><span>{p.label}</span></button>)}</nav><button className="sd-logout" onClick={() => setDialog('logout')}><StaffIcon name="logout" />Logout</button></aside>
+    <div className="sd-workspace"><header className="sd-header pp-header"><button type="button" className="sd-menu sd-icon-button" aria-label="Toggle navigation" aria-controls="portal-navigation" aria-expanded={menu} onClick={() => setMenu(!menu)}><StaffIcon name="menu" /></button><h1 ref={heading} tabIndex={-1}>{info.title}</h1>{page !== 'profile' && <label className="sd-search"><StaffIcon name="search" /><input type="search" aria-label={info.search.replace('...', '')} placeholder={info.search} value={search} onChange={e => setSearch(e.target.value)} /></label>}<button className="sd-icon-button pp-bell" aria-label={`${alerts.filter(a => (a.status === 'Active' || a.status === 'Pending')).length} unresolved alerts`} onClick={() => navigate('alerts')}><StaffIcon name="alerts" /><span>{alerts.filter(a => (a.status === 'Active' || a.status === 'Pending')).length}</span></button><button className="sd-icon-button" aria-label="Staff account" aria-current={page === 'profile' ? 'page' : undefined} onClick={() => navigate('profile')}><StaffIcon name="user" /></button></header>
+      {page !== 'dashboard' && page !== 'residents' && page !== 'tasks' && page !== 'alerts' && page !== 'staff' && page !== 'profile' && (
         <div className="sd-demo-banner">{page === 'alerts' ? 'Alerts · Supabase records' : 'This module still uses demo data · Changes may reset on reload'}</div>
       )}
       <div id="portal-content" tabIndex={-1}>
+        {page === 'profile' && <StaffProfilePage onEditingChange={(dirty, busy) => { profileEdit.current = { dirty, busy } }} onBack={() => { profileEdit.current.dirty = false; navigate(previousPage.current) }} />}
         <div hidden={page !== 'dashboard'}><StaffDashboard onLogout={onLogout} onResidents={() => navigate('residents')} onTasks={() => navigate('tasks')} onPage={navigate} /></div>
         <div hidden={page !== 'residents'}><ResidentPage onLogout={onLogout} /></div>
         <div hidden={page !== 'tasks'}><TaskPage onLogout={onLogout} active={page === 'tasks'} /></div>
         <div hidden={page !== 'alerts'}><AlertsPage /></div>
-        <div hidden={page !== 'staff'}><StaffPage /></div>
+        <div hidden={page !== 'staff'}><StaffPage active={page === 'staff'} /></div>
         <div hidden={page !== 'subscription'}><SubscriptionPage /></div>
         <div hidden={page !== 'incidents'}><IncidentsPage /></div>
         <div hidden={page !== 'reports'}><ReportsPage /></div>
       </div>
     </div>
-    {dialog && <Modal title={dialog === 'logout' ? 'Leave staff preview?' : 'Staff preview account'} onClose={() => setDialog('')}><p>{dialog === 'logout' ? 'All local demo changes will reset. No server records will be changed.' : 'CommunityCare staff preview. Authentication and property permissions will be connected later.'}</p><div className="sd-dialog-actions"><button onClick={() => setDialog('')}>Close</button>{dialog === 'logout' && <button className="sd-primary" onClick={onLogout}>Leave preview</button>}</div></Modal>}
+    {dialog === 'logout' && <Modal title="Sign out?" onClose={() => setDialog('')}><p>You will be signed out. Saved records will remain in Supabase.</p><div className="sd-dialog-actions"><button onClick={() => setDialog('')}>Close</button><button className="sd-primary" onClick={onLogout}>Sign out</button></div></Modal>}
   </div>
 }
 export default function StaffPortal({ onLogout }: { onLogout: () => void }) { return <PortalProvider><Shell onLogout={onLogout} /></PortalProvider> }

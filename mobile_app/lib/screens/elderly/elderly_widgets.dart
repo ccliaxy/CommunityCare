@@ -1,3 +1,4 @@
+import '../../alerts/sos_dialog.dart';
 import 'package:flutter/material.dart';
 import 'elderly_demo_data.dart';
 
@@ -120,37 +121,8 @@ Future<void> showDemoInfo(BuildContext context, String title, String body) =>
       ),
     );
 
-Future<void> showEmergencyPreview(BuildContext context) async {
-  final confirmed = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      scrollable: true,
-      icon: const Icon(Icons.sos_rounded, color: careRed, size: 48),
-      title: const Text('Request emergency help?'),
-      content: const Text(
-        'UI demo only. No staff, family member or emergency service will be contacted.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: careRed),
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Preview request'),
-        ),
-      ],
-    ),
-  );
-  if (confirmed == true && context.mounted) {
-    await showDemoInfo(
-      context,
-      'Emergency request preview',
-      'This is where the request status will appear once the backend is connected. No alert was sent.',
-    );
-  }
-}
+// Kept for the existing Home/Safety call sites; this now sends a confirmed SOS.
+Future<void> showEmergencyPreview(BuildContext context) => showSosRequest(context);
 
 class ContactCard extends StatelessWidget {
   const ContactCard({super.key, required this.contact});

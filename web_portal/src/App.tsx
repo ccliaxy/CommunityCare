@@ -21,6 +21,6 @@ function ConnectedApp({ client }: { client: SupabaseClient }) {
   </>
 }
 export default function App() {
-  if (new URLSearchParams(window.location.search).get('setup') === 'resident') return <ResidentPasswordPage />
+  if (['resident','staff'].includes(new URLSearchParams(window.location.search).get('setup')??'')) return <ResidentPasswordPage />
   return supabase ? <ConnectedApp client={supabase} /> : <main className="cc-auth-status"><h1>Supabase configuration needed</h1><p role="alert">{configurationError}</p><p>Keep server secret keys out of this web application.</p></main>
 }
