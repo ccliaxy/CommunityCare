@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import './AlertCancelButton.css'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { usePortal } from './PortalContext'
 import { Badge, includesSearch, Modal, Notice, Panel, Table } from './PortalUI'
@@ -11,11 +12,11 @@ import type { AlertOptions } from './alertRepository'
 function AlertEditor({alert,options,blocked,refresh,onReload}:{alert:LiveAlert;options:AlertOptions|null;blocked:boolean;refresh:()=>Promise<void>;onReload:()=>void}){
  const [version,setVersion]=useState(alert.revision),[member,setMember]=useState(alert.assignedMembershipId??'')
  const [actions,setActions]=useState(alert.actions),[notes,setNotes]=useState(alert.notes),[outcome,setOutcome]=useState(alert.report?.outcome??'pending')
- const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[cancel,setCancel]=useState(false),[reason,setReason]=useState('')
+ const [busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('')
  const closed=['Resolved','Cancelled'].includes(alert.status),stale=version!==alert.revision,disabled=busy||blocked||closed||stale
  async function save(action:string,details:Record<string,unknown>={}){
   if(disabled)return;setBusy(true);setError('');setNotice('')
-  try{const saved=await updateAlert(alert.id,{revision:version,action,...details});setVersion(saved.revision);setCancel(false);setNotice(action==='report'?'Report saved to the incident record.':'Alert updated.');await refresh()}
+  try{const saved=await updateAlert(alert.id,{revision:version,action,...details});setVersion(saved.revision);setNotice(action==='report'?'Report saved to the incident record.':'Alert updated.');await refresh()}
   catch(e){setError(e instanceof Error?e.message:'Could not save.');await refresh()}
   finally{setBusy(false)}
  }
@@ -33,7 +34,6 @@ function AlertEditor({alert,options,blocked,refresh,onReload}:{alert:LiveAlert;o
    {alert.report&&<p style={{overflowWrap:'anywhere'}}>Incident ID: {alert.report.incident_id}</p>}
    {!closed&&<button type="submit" disabled={disabled||!actions.trim()}>{busy?'Saving…':'Save Report'}</button>}
   </form></Panel>
-  {!closed&&<Panel title="Cancel incorrect alert">{!cancel?<button disabled={disabled} onClick={()=>setCancel(true)}>Cancel alert…</button>:<form onSubmit={e=>{e.preventDefault();void save('cancel',{reason})}}><label>Cancellation reason<textarea required maxLength={1000} value={reason} onChange={e=>setReason(e.target.value)} disabled={disabled}/></label><p>The alert will stay in the history.</p><div className="pp-actions"><button type="button" disabled={busy} onClick={()=>setCancel(false)}>Keep alert</button><button disabled={disabled||!reason.trim()}>Confirm cancellation</button></div></form>}</Panel>}
  </div><Panel title="Incident Location" actions={<Badge value={alert.status}/>}><AlertLocationMap key={`${alert.id}:${alert.coordinates?.join(',')??'none'}`} alert={alert}/><p className="pp-muted">Source: {alert.source} · Current unit is not a snapshot of the unit at the time of the alert.</p></Panel></div>
 }
 
@@ -42,6 +42,24 @@ export default function AlertsPage(){
  const [selectedId,setSelectedId]=useState(''),[filter,setFilter]=useState('All statuses'),[reset,setReset]=useState(0)
  const [options,setOptions]=useState<AlertOptions|null>(null),[optionsError,setOptionsError]=useState('')
  const [create,setCreate]=useState<string|null>(null),[property,setProperty]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('')
+ const [cancelTarget,setCancelTarget]=useState<LiveAlert|null>(null)
+ const [cancelReason,setCancelReason]=useState(''),[cancelError,setCancelError]=useState(''),[cancelNotice,setCancelNotice]=useState('')
+ const [cancelBusy,setCancelBusy]=useState(false),cancelLock=useRef(false)
+ const currentCancel=alerts.find(a=>a.id===cancelTarget?.id)
+ const cancelChanged=!!cancelTarget&&(!currentCancel||currentCancel.revision!==cancelTarget.revision||!['Active','Pending'].includes(currentCancel.status))
+ async function confirmCancellation(event:FormEvent<HTMLFormElement>){
+  event.preventDefault()
+  if(cancelLock.current||!cancelTarget||alertsLoading||alertsError||cancelChanged)return
+  const reason=cancelReason.trim()
+  if(!reason){setCancelError('Enter a cancellation reason.');return}
+  cancelLock.current=true;setCancelBusy(true);setCancelError('');setCancelNotice('')
+  try{
+   await updateAlert(cancelTarget.id,{revision:cancelTarget.revision,action:'cancel',reason})
+   setCancelNotice(`Alert for ${cancelTarget.name} cancelled. The record and cancellation reason remain in history.`)
+   setCancelTarget(null);setCancelReason('')
+  }catch(e){setCancelError(e instanceof Error?e.message:'Could not cancel the alert. Check its refreshed status before retrying.')}
+  finally{await refreshAlerts();cancelLock.current=false;setCancelBusy(false)}
+ }
  useEffect(()=>{const controller=new AbortController();readAlertOptions(controller.signal).then(data=>{if(!controller.signal.aborted){setOptions(data);setOptionsError('')}}).catch(e=>{if(!controller.signal.aborted){setOptions(null);setOptionsError(e instanceof Error?e.message:'Could not load staff/residents.')}});return()=>controller.abort()},[alertsUpdatedAt])
  const visible=alerts.filter(a=>includesSearch(search,a.id,a.name,a.unit,a.type,a.propertyName)&&(filter==='All statuses'||a.status===filter))
  const selected=visible.find(a=>a.id===selectedId)??visible[0]
@@ -57,14 +75,27 @@ export default function AlertsPage(){
   <button onClick={()=>void refreshAlerts()} disabled={alertsLoading}>{alertsLoading?'Loading…':'Refresh alerts'}</button>
   <button disabled={!options?.properties.length||alertsLoading} onClick={()=>{setCreate(crypto.randomUUID());setProperty(options?.properties[0]?.id??'');setError('')}}>Record Alert</button>
  </>}>
+  <Notice>{cancelNotice}</Notice>
   {optionsError&&<p role="alert">Assignment options unavailable: {optionsError}</p>}
   {alertsError?<div role="alert"><strong>Could not load alerts</strong><p>{alertsError}</p></div>:<>
    {alertsLoading&&<Notice>Updating alerts…</Notice>}
-   <Table label="Emergency alert list"><thead><tr>{['Alert ID','Resident','Current unit','Type','Time (MYT)','Status','Action'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{visible.map(a=><tr key={a.id} className={a.id===selected?.id?'pp-selected':''}><th scope="row" title={a.id}>{a.id.slice(0,8)}</th><td>{a.name}</td><td>{a.unit}</td><td>{a.type}</td><td>{displayAlertTime(a.time)}</td><td><Badge value={a.status}/></td><td><button aria-pressed={a.id===selected?.id} onClick={()=>setSelectedId(a.id)}>Review</button></td></tr>)}{!visible.length&&!alertsLoading&&<tr><td colSpan={7}>No accessible alerts match this view.</td></tr>}</tbody></Table>
+   <Table label="Emergency alert list"><thead><tr>{['Alert ID','Resident','Current unit','Type','Time (MYT)','Status','Action'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{visible.map(a=><tr key={a.id} className={a.id===selected?.id?'pp-selected':''}><th scope="row" title={a.id}>{a.id.slice(0,8)}</th><td>{a.name}</td><td>{a.unit}</td><td>{a.type}</td><td>{displayAlertTime(a.time)}</td><td><Badge value={a.status}/></td><td><div className="pp-actions"><button aria-pressed={a.id===selected?.id} onClick={()=>setSelectedId(a.id)}>Review</button><button className="cc-alert-cancel" disabled={alertsLoading||cancelBusy||busy||!['Active','Pending'].includes(a.status)} aria-label={`Cancel alert for ${a.name}`} onClick={()=>{setCancelTarget({...a});setCancelReason('');setCancelError('');setCancelNotice('')}}>Cancel</button></div></td></tr>)}{!visible.length&&!alertsLoading&&<tr><td colSpan={7}>No accessible alerts match this view.</td></tr>}</tbody></Table>
    {alertsUpdatedAt&&<p className="pp-muted">Last updated: {displayAlertTime(alertsUpdatedAt)}</p>}
   </>}
  </Panel>
- {selected&&!alertsError&&<AlertEditor key={`${selected.id}:${reset}`} alert={selected} options={options} blocked={alertsLoading} refresh={refreshAlerts} onReload={()=>setReset(v=>v+1)}/>}
+ {selected&&!alertsError&&<AlertEditor key={`${selected.id}:${reset}`} alert={selected} options={options} blocked={alertsLoading||!!cancelTarget||cancelBusy} refresh={refreshAlerts} onReload={()=>setReset(v=>v+1)}/>}
+ {cancelTarget&&<Modal title="Cancel alert" blockClose={cancelBusy} onClose={()=>{if(!cancelLock.current)setCancelTarget(null)}}>
+  <form onSubmit={confirmCancellation}>
+   <p><strong>{cancelTarget.name}</strong> · {cancelTarget.type}</p>
+   <p>{displayAlertTime(cancelTarget.time)}</p><p style={{overflowWrap:'anywhere'}}>Alert ID: {cancelTarget.id}</p>
+   <label>Cancellation reason<textarea autoFocus required maxLength={1000} value={cancelReason} onChange={e=>setCancelReason(e.target.value)} disabled={cancelBusy} placeholder="Explain why this alert should be cancelled…"/></label>
+   <p>This cancels the alert without deleting it. Use this for an incorrect or duplicate alert; completed assistance should be recorded as resolved.</p>
+   {cancelChanged&&<p role="alert">This alert has changed. Close this dialog, review the latest status and reopen Cancel if appropriate.</p>}
+   {alertsError&&<p role="alert">Could not verify the latest alert: {alertsError}</p>}
+   {cancelError&&<p role="alert">{cancelError}</p>}
+   <div className="sd-dialog-actions"><button type="button" disabled={cancelBusy} onClick={()=>setCancelTarget(null)}>Keep alert</button><button className="cc-alert-cancel" disabled={cancelBusy||alertsLoading||!!alertsError||cancelChanged||!cancelReason.trim()}>{cancelBusy?'Cancelling…':'Confirm cancellation'}</button></div>
+  </form>
+ </Modal>}
  {create&&<Modal blockClose={busy} title="Record a manual alert" onClose={()=>{if(!busy)setCreate(null)}}><form onSubmit={submit}>
   <label>Property<select value={property} onChange={e=>setProperty(e.target.value)} disabled={busy}>{options?.properties.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
   <label>Resident<select key={property} name="resident" required defaultValue="" disabled={busy}><option value="">Select resident…</option>{options?.residents.filter(r=>r.property_id===property).map(r=><option key={r.id} value={r.id}>{r.name} · {r.unit}</option>)}</select></label>
@@ -75,3 +106,4 @@ export default function AlertsPage(){
  </form></Modal>}
  </div>
 }
+

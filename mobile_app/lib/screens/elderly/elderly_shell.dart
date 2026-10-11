@@ -1,3 +1,4 @@
+import '../../subscription/property_subscription_page.dart';
 import '../../alerts/alerts_page.dart';
 import '../../tasks/care_tasks_page.dart';
 import 'package:flutter/material.dart';
@@ -149,6 +150,7 @@ class _ElderlyShellState extends State<ElderlyShell> {
                 ],
               ),
               actions: [
+if (widget.accountName != null) IconButton(tooltip: 'Property plan', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PropertySubscriptionPage())), icon: const Icon(Icons.card_membership_outlined)),
 if (widget.accountName != null) IconButton(
                   tooltip: 'Emergency alerts',
                   onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const MobileAlertsPage())),
@@ -254,3 +256,4 @@ if (widget.accountName != null) IconButton(
     ),
   );
 }
+

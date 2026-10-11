@@ -5,6 +5,8 @@ function createApp(db,env){
  const app=express();app.disable('x-powered-by');
  const origins=(env.ALLOWED_ORIGINS??'').split(',').map(s=>s.trim()).filter(Boolean);
  app.use(cors({origin(origin,done){done(null,!origin||origins.includes(origin));}}));
+ const billing=require('./services/billing').createBillingService(db,env);
+ app.post('/api/billing/webhook',express.raw({type:'application/json',limit:'256kb'}),async(req,res)=>res.json(await billing.webhook(req.body,req.headers['stripe-signature'])));
  app.use(express.json({limit:'16kb'}));
  app.use((req,res,next)=>{res.setHeader('Cache-Control','no-store');next();});
  app.get('/health',(req,res)=>res.json({ok:true,service:'CommunityCare Express'}));
@@ -14,3 +16,4 @@ function createApp(db,env){
  return app;
 }
 module.exports={createApp};
+

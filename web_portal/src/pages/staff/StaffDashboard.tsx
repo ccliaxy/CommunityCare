@@ -1,3 +1,4 @@
+import { updateAlert } from './alertRepository'
 import { useEffect, useRef, useState } from 'react'
 import StaffIcon from './StaffIcon'
 import type { StaffIconName } from './StaffIcon'
@@ -18,9 +19,36 @@ const badge = (status: string) => status === 'completed' || status === 'resolved
 const label = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())
 const formatTime = (value: string) => new Date(value).toLocaleString('en-MY', { timeZone: zone })
 export default function StaffDashboard({ onPage }: Props) {
-  const { search, setSearch } = usePortal()
+  const { search, setSearch, alerts: liveAlerts, alertsLoading, alertsError, refreshAlerts } = usePortal()
   const [data, setData] = useState<DashboardData | null>(null)
   const [error, setError] = useState('')
+  const [acknowledging, setAcknowledging] = useState<string | null>(null)
+  const [ackError, setAckError] = useState('')
+  const [ackNotice, setAckNotice] = useState('')
+  const ackBusy = useRef(false), mounted = useRef(false)
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
+  async function acknowledge(id: string) {
+    if (ackBusy.current) return
+    const latest = liveAlerts.find(a => a.id === id)
+    if (alertsLoading || alertsError || !latest || latest.status !== 'Active') {
+      setAckError('Alert details changed or are unavailable. Reloading the latest records; check the status before trying again.')
+      await refreshAlerts()
+      return
+    }
+    ackBusy.current = true; setAcknowledging(id); setAckError(''); setAckNotice('')
+    try {
+      await updateAlert(id, { action: 'acknowledge', revision: latest.revision })
+      if (mounted.current) setAckNotice('Alert acknowledged. It remains unresolved until follow-up is completed in Alerts.')
+    } catch (reason) {
+      if (mounted.current) setAckError(`${reason instanceof Error ? reason.message : 'Could not confirm acknowledgement.'} Check the refreshed status before retrying.`)
+    } finally {
+      // Reconcile after success, a version conflict or an uncertain network response.
+      // The shared refresh updates Alerts, the bell and the dashboard change event.
+      await refreshAlerts()
+      ackBusy.current = false
+      if (mounted.current) { setAcknowledging(null); setTaskRevision(v => v + 1) }
+    }
+  }
   const [loading, setLoading] = useState(true)
   const [property, setProperty] = useState('')
   const [loadedAt, setLoadedAt] = useState<Date | null>(null)
@@ -64,6 +92,8 @@ export default function StaffDashboard({ onPage }: Props) {
   }
   return <div id="staff-top" className="sd-live-dashboard">
     {error && <p className="sd-error" role="alert">Could not load dashboard: {error}. Reload the browser page to retry.</p>}
+    {ackError && <p className="sd-error" role="alert">{ackError}</p>}
+    {ackNotice && <p className="sd-notice" role="status">{ackNotice}</p>}
     {loading && <p role="status">Loading records…</p>}
     {data && !loading && <>
       <label className="sd-db-filter">Property <select value={property} onChange={e => setProperty(e.target.value)}><option value="">All accessible properties</option>{data.properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
@@ -72,10 +102,11 @@ export default function StaffDashboard({ onPage }: Props) {
         <div className="sd-left-column">
           <section className="sd-card sd-alert-card"><div className="sd-card-heading"><h2><StaffIcon name="alerts" />Urgent Alerts</h2><span className="sd-badge sd-missed">{alerts.length} Unresolved</span></div>
             {!alerts.length && <p>No unresolved alerts.</p>}
-            {alerts.slice(0, 10).map(a => <article className="sd-alert-item" key={a.id}><h3>{label(a.alert_type)} · {data.users.find(u => u.id === a.elderly_id)?.full_name ?? 'Name unavailable'}</h3><p>{formatTime(a.alert_time)}</p><p className="sd-event-time">{label(a.status)}</p><div className="sd-alert-actions"><button disabled={!onPage} onClick={() => onPage?.('alerts')}>View alerts</button><button disabled title="Acknowledgement is not connected yet">{a.status === 'acknowledged' ? 'Acknowledged' : 'Acknowledge'}</button></div></article>)}
+            {alerts.slice(0, 10).map(a => <article className="sd-alert-item" key={a.id}><h3>{label(a.alert_type)} · {data.users.find(u => u.id === a.elderly_id)?.full_name ?? 'Name unavailable'}</h3><p>{formatTime(a.alert_time)}</p><p className="sd-event-time">{label(a.status)}</p><div className="sd-alert-actions"><button disabled={!onPage} onClick={() => onPage?.('alerts')}>View alerts</button><button disabled={acknowledging !== null || a.status !== 'open' || alertsLoading || !!alertsError || !liveAlerts.some(item => item.id === a.id && item.status === 'Active')} aria-label={`Acknowledge alert for ${data.users.find(u => u.id === a.elderly_id)?.full_name ?? 'resident'}`} onClick={() => void acknowledge(a.id)}>{acknowledging === a.id ? 'Acknowledging…' : a.status === 'acknowledged' ? 'Acknowledged' : 'Acknowledge'}</button></div></article>)}
             {alerts.length > 10 && <p>Showing the latest 10 of {alerts.length} unresolved alerts.</p>}
             
-            <p className="sd-muted">Acknowledgement is not available here yet.</p>
+            <p className="sd-muted">Acknowledging confirms receipt. Continue follow-up in Alerts.</p>
+            {alertsError && <p className="sd-error" role="alert">Alert actions unavailable: {alertsError} <button onClick={() => void refreshAlerts()}>Retry loading alerts</button></p>}
           </section>
           <section className="sd-card"><h2>Quick Actions</h2><div className="sd-quick-grid">{quickActions.map(action => <button key={action.label} disabled={action.label !== 'Generate Report'} title={action.label === 'Generate Report' ? 'Export current dashboard summary' : 'Not available yet'} onClick={exportSummary}><StaffIcon name={action.icon} /><span>{action.label}</span></button>)}</div><p className="sd-muted">Greyed-out actions are not available yet.</p></section>
         </div>

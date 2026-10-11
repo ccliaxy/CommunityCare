@@ -644,3 +644,17 @@
         display:none!important
     }
 }
+
+/* Highlight the profile navigation button only while My Profile is selected. */
+.sd-app .pp-header button.sd-icon-button[aria-label="Staff account"][aria-current="page"] {
+    background: #006a63;
+    color: #fff;
+}
+.sd-app .pp-header button.sd-icon-button[aria-label="Staff account"][aria-current="page"]:hover {
+    background: #00564f;
+    color: #fff;
+}
+.sd-app .pp-header button.sd-icon-button[aria-label="Staff account"]:focus-visible {
+    outline: 2px solid #006a63;
+    outline-offset: 3px;
+}

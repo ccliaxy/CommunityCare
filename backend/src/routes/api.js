@@ -8,7 +8,9 @@ const express=require('express');
 const {createResidentService}=require('../services/residents');
 const {readDashboard}=require('../services/dashboard');
 function createRoutes(db,env){
+ const billing=require('../services/billing').createBillingService(db,env);
  const router=express.Router(), residents=createResidentService(db,env), tasks=createTaskService(db), alerts=createAlertService(db);
+ router.get('/mobile/subscription',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly','family']);res.json(await billing.mobile(actor));});
  router.get('/mobile/alerts',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly','family']);res.json(await alerts.mobile(actor));});
  router.post('/mobile/alerts/sos',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly']);const result=await alerts.create(actor,req.body,true);res.status(result.replayed?200:201).json(result);});
  router.get('/mobile/tasks',async(req,res)=>{
@@ -47,6 +49,15 @@ function createRoutes(db,env){
  router.get('/staff',async(req,res)=>res.json(await staff.snapshot(req.actor,req.query)));
  router.post('/staff/commands',async(req,res)=>res.json(await staff.command(req.actor,req.body)));
  router.post('/staff/invitations',async(req,res)=>res.status(201).json(await staff.invite(req.actor,req.body)));
+ router.get('/billing',async(req,res)=>res.json(await billing.read(req.actor)));
+ router.post('/billing/checkout',async(req,res)=>res.json(await billing.checkout(req.actor,req.body)));
+ router.post('/billing/portal',async(req,res)=>res.json(await billing.portal(req.actor,req.body)));
+ router.post('/billing/sync',async(req,res)=>res.json(await billing.sync(req.actor,req.body)));
+ const notifications=require('../services/notifications').createNotificationService(db);
+ router.get('/notifications',async(req,res)=>res.json(await notifications.list(req.actor,req.query)));
+ router.post('/notifications/:id/read',async(req,res)=>res.json(await notifications.read(req.actor,req.params.id)));
  return router;
 }
 module.exports={createRoutes};
+
+

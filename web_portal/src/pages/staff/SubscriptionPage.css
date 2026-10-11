@@ -1,0 +1,8 @@
+.billing-page .billing-top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.billing-page .billing-top label{display:flex;gap:12px;align-items:center}
+.billing-page .billing-top select{max-width:100%;padding:10px;border:1px solid #b6ceca;border-radius:5px;background:#fff;color:#263d37}
+.billing-page .billing-test{background:#fff3da;color:#725000;border-radius:6px;padding:8px 12px;font-size:13px}
+.billing-page .billing-error{border:1px solid #efb1ad;background:#fff3f1;color:#c62828;border-radius:6px;padding:14px;overflow-wrap:anywhere}
+.billing-page button:disabled{opacity:.55;cursor:not-allowed}
+.billing-page td,.billing-page th{overflow-wrap:anywhere}
+@media(max-width:650px){.billing-page .billing-top label{width:100%;align-items:flex-start;flex-direction:column}.billing-page .billing-top select{width:100%}}

@@ -21,3 +21,8 @@
 .sp-account-details{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px}.sp-id{font-family:monospace;font-size:12px!important;word-break:break-all}.sp-feedback{padding:15px 18px;border-radius:8px;margin:0 0 20px;font-size:14px;line-height:1.6}.sp-feedback p{margin:0 0 10px}.sp-error{background:#fff2ef;color:#a72c24;border:1px solid #f1ccc5}.sp-success{background:#e8f5ee;color:#215f44;border:1px solid #c4e4d2}.sp-empty{font-size:14px;color:#60766f}
 @media(max-width:1000px){.sp-profile{padding:22px}.sp-layout{grid-template-columns:1fr}.sp-summary{display:block}.sp-card{padding:22px}.sp-summary dl{max-width:450px;margin:20px auto 0}}
 @media(max-width:600px){.sp-profile{padding:16px}.sp-card{padding:18px}.sp-page-heading{align-items:flex-start}.sp-page-heading h2{font-size:23px}.sp-form-grid,.sp-account-details{grid-template-columns:1fr}.sp-form-footer{align-items:stretch}.sp-form-footer>div{width:100%;flex-wrap:wrap}.sp-form-footer button{flex:1}.sp-membership dl{grid-template-columns:1fr}.sp-membership{padding:15px}}
+
+/* Field-level validation uses the existing CommunityCare alert red. */
+.sp-profile .sp-field-error { display:block; margin-top:8px; color:#c62828; font-size:12px; font-weight:500; line-height:1.5; }
+.sp-profile input[aria-invalid="true"] { border-color:#c62828; box-shadow:0 0 0 1px #c62828; }
+.sp-profile input[aria-invalid="true"]:focus-visible { outline-color:#c62828; }

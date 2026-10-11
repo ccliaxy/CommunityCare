@@ -1,0 +1,18 @@
+/* Existing CommunityCare alert red: same as the urgent badge and alert border. */
+.sd-app button.cc-alert-cancel {
+  background: #c62828;
+  border-color: #c62828;
+  color: #fff;
+}
+.sd-app button.cc-alert-cancel:hover:not(:disabled) {
+  background: #93000a;
+  border-color: #93000a;
+}
+.sd-app button.cc-alert-cancel:focus-visible {
+  outline: 3px solid #c62828;
+  outline-offset: 3px;
+}
+.sd-app button.cc-alert-cancel:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
