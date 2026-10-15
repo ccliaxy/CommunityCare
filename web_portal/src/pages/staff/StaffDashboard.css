@@ -386,6 +386,17 @@
     flex-shrink:0; 
 }
 
+/* Keep search focus on the rounded container, not a rectangle inside it. */
+.sd-search input:focus,
+.sd-search input:focus-visible {
+    outline:none;
+    box-shadow:none;
+}
+
+.sd-search:focus-within {
+    border-color:#007f78;
+}
+
 .sd-resident-name { 
     display:flex; 
     align-items:center; 

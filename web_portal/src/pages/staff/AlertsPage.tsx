@@ -1,3 +1,5 @@
+import { useQuickAction } from './dashboardQuickAction'
+import type { QuickAction } from './dashboardQuickAction'
 import './AlertCancelButton.css'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -37,7 +39,7 @@ function AlertEditor({alert,options,blocked,refresh,onReload}:{alert:LiveAlert;o
  </div><Panel title="Incident Location" actions={<Badge value={alert.status}/>}><AlertLocationMap key={`${alert.id}:${alert.coordinates?.join(',')??'none'}`} alert={alert}/><p className="pp-muted">Source: {alert.source} · Current unit is not a snapshot of the unit at the time of the alert.</p></Panel></div>
 }
 
-export default function AlertsPage(){
+export default function AlertsPage({active=true,quick}:{active?:boolean;quick?:QuickAction}){
  const {alerts,alertsLoading,alertsError,alertsUpdatedAt,refreshAlerts,search}=usePortal()
  const [selectedId,setSelectedId]=useState(''),[filter,setFilter]=useState('All statuses'),[reset,setReset]=useState(0)
  const [options,setOptions]=useState<AlertOptions|null>(null),[optionsError,setOptionsError]=useState('')
@@ -61,6 +63,13 @@ export default function AlertsPage(){
   finally{await refreshAlerts();cancelLock.current=false;setCancelBusy(false)}
  }
  useEffect(()=>{const controller=new AbortController();readAlertOptions(controller.signal).then(data=>{if(!controller.signal.aborted){setOptions(data);setOptionsError('')}}).catch(e=>{if(!controller.signal.aborted){setOptions(null);setOptionsError(e instanceof Error?e.message:'Could not load staff/residents.')}});return()=>controller.abort()},[alertsUpdatedAt])
+ useQuickAction(quick, active, q => {
+  if (q.action !== 'Send Alert') return true
+  if (!options || busy || alertsLoading) return false
+  const target = q.property || options.properties[0]?.id || ''
+  if (!options.properties.some(p => p.id === target)) { setOptionsError('Selected property is unavailable.'); return true }
+  setProperty(target); setError(''); setCreate(crypto.randomUUID()); return true
+ })
  const visible=alerts.filter(a=>includesSearch(search,a.id,a.name,a.unit,a.type,a.propertyName)&&(filter==='All statuses'||a.status===filter))
  const selected=visible.find(a=>a.id===selectedId)??visible[0]
  async function submit(event:FormEvent<HTMLFormElement>){

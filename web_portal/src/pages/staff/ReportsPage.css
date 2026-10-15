@@ -1,0 +1,9 @@
+.pp-live-reports .report-filters{display:flex;flex-wrap:wrap;align-items:end;gap:16px}
+.pp-live-reports .report-filters label{display:grid;gap:8px;min-width:170px;flex:1}
+.pp-live-reports .report-filters input,.pp-live-reports .report-filters select{width:100%;min-height:42px;border:1px solid #b7ceca;border-radius:5px;padding:9px;background:#f7fbfa;color:#24403b;font:inherit;box-sizing:border-box}
+.pp-live-reports .report-error{color:#bd252c;background:#fff1f0;border:1px solid #f2c1bd;padding:12px;border-radius:6px}
+.pp-live-reports .report-usage>div{display:grid;grid-template-columns:1fr auto;gap:8px;margin:18px 0}
+.pp-live-reports progress{grid-column:1/-1;width:100%;height:12px;accent-color:#007f78}
+.pp-live-reports button:disabled{opacity:.5;cursor:not-allowed}
+.pp-live-reports .pp-chart{width:100%;height:auto}
+@media(max-width:640px){.pp-live-reports .report-filters{display:grid;grid-template-columns:1fr}.pp-live-reports .pp-metrics{flex-wrap:wrap}}

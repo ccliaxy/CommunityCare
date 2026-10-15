@@ -1,3 +1,5 @@
+import { useQuickAction } from './dashboardQuickAction'
+import type { QuickAction } from './dashboardQuickAction'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import StaffIcon from './StaffIcon'
@@ -10,7 +12,7 @@ import './TaskPage.css'
 type Modal = { kind:'create'; requestId:string } | { kind:'assign'|'cancel'; id:string } | null
 const label=(s:string)=>s.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase())
 const shortId=(id:string)=>`TSK-${id.slice(0,8).toUpperCase()}`
-export default function TaskPage({active=true}: {onLogout:()=>void;active?:boolean}) {
+export default function TaskPage({active=true,quick}: {onLogout:()=>void;active?:boolean;quick?:QuickAction}) {
  const {search,setSearch}=usePortal()
  const [data,setData]=useState<TaskData|null>(null)
  const [filter,setFilter]=useState('all'),[property,setProperty]=useState(''),[day,setDay]=useState('')
@@ -40,6 +42,13 @@ export default function TaskPage({active=true}: {onLogout:()=>void;active?:boole
   const focus=()=>void load();window.addEventListener('focus',focus)
   return()=>{controller.abort();window.clearInterval(timer);window.removeEventListener('focus',focus)}
  },[active,revision])
+ useQuickAction(quick, active, q => {
+  if (q.action !== 'New Task') return true
+  if (!data || loading || busy || loadError) return false
+  const target = q.property || data.properties[0]?.id || ''
+  if (!data.properties.some(p => p.id === target)) { setNotice('The selected property is unavailable. Choose an accessible property.'); return true }
+  setProperty(target); setFormProperty(target); setError(''); setModal({kind:'create',requestId:crypto.randomUUID()}); return true
+ })
  const tasks=data?.tasks??[]
  const scoped=tasks.filter(t=>(!property||t.property_id===property)&&(!day||t.due_day===day||(t.due_day<day&&taskStatus(t,now)==='missed')))
  const missed=scoped.filter(t=>taskStatus(t,now)==='missed')

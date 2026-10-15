@@ -8,8 +8,12 @@ const express=require('express');
 const {createResidentService}=require('../services/residents');
 const {readDashboard}=require('../services/dashboard');
 function createRoutes(db,env){
+ const properties=require('../services/properties').createPropertyService(db);
  const billing=require('../services/billing').createBillingService(db,env);
+ const incidents=require('../services/incidents').createIncidentService(db,env);
  const router=express.Router(), residents=createResidentService(db,env), tasks=createTaskService(db), alerts=createAlertService(db);
+ router.get('/mobile/properties',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly','family']);res.json(await properties.linked(actor));});
+ router.get('/mobile/incidents',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly','family']);res.json(await incidents.mobile(actor));});
  router.get('/mobile/subscription',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly','family']);res.json(await billing.mobile(actor));});
  router.get('/mobile/alerts',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly','family']);res.json(await alerts.mobile(actor));});
  router.post('/mobile/alerts/sos',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly']);const result=await alerts.create(actor,req.body,true);res.status(result.replayed?200:201).json(result);});
@@ -56,8 +60,39 @@ function createRoutes(db,env){
  const notifications=require('../services/notifications').createNotificationService(db);
  router.get('/notifications',async(req,res)=>res.json(await notifications.list(req.actor,req.query)));
  router.post('/notifications/:id/read',async(req,res)=>res.json(await notifications.read(req.actor,req.params.id)));
+ router.use('/incidents',(req,res,next)=>req.actor.role==='property_staff'?next():res.status(403).json({error:'Property staff account required.'}));
+ router.get('/incidents/options',async(req,res)=>res.json(await incidents.options(req.actor)));
+ router.get('/incidents',async(req,res)=>res.json(await incidents.list(req.actor)));
+ router.post('/incidents/commands',async(req,res)=>res.json(await incidents.command(req.actor,req.body)));
+ router.post('/incidents/:id/evidence/:fileId',express.raw({type:'application/octet-stream',limit:'10mb'}),async(req,res)=>res.json(await incidents.upload(req.actor,req.params.id,req.params.fileId,req.query.filename,req.body)));
+ router.get('/incidents/:id/evidence/:fileId',async(req,res)=>res.json(await incidents.download(req.actor,req.params.id,req.params.fileId)));
+ const reports=require('../services/reports').createReportService(db);
+ router.get('/reports/options',async(req,res)=>res.json(await reports.options(req.actor)));
+ router.get('/reports',async(req,res)=>res.json(await reports.read(req.actor,req.query)));
+ const photo=require('../services/staffPhoto').createStaffPhotoService(db,env);
+ router.get('/staff/profile/photo',async(req,res)=>{res.set('Cache-Control','no-store');res.json(await photo.read(req.actor));});
+ router.put('/staff/profile/photo',express.raw({type:'application/octet-stream',limit:'2mb'}),async(req,res)=>res.json(await photo.upload(req.actor,req.query.expected,req.body)));
+ router.delete('/staff/profile/photo',async(req,res)=>res.json(await photo.remove(req.actor,req.query.expected)));
+ router.get('/admin/properties',async(req,res)=>res.json(await properties.list(req.actor)));
+ router.post('/admin/properties/commands',async(req,res)=>res.json(await properties.command(req.actor,req.body)));
+ router.get('/staff/properties',async(req,res)=>res.json(await properties.linked(req.actor)));
+ const users=require('../services/users').createUserService(db,env);
+ router.get('/admin/users',async(req,res)=>res.json(await users.list(req.actor)));
+ router.post('/admin/users/invitations',async(req,res)=>res.status(201).json(await users.invite(req.actor,req.body)));
+ router.patch('/admin/users/:id',async(req,res)=>res.json({id:await users.update(req.actor,req.params.id,req.body)}));
+ router.post('/admin/users/:id/links',async(req,res)=>{await users.link(req.actor,req.params.id,req.body);res.json({saved:true});});
+ router.post('/admin/users/:id/recovery',async(req,res)=>res.json(await users.recover(req.actor,req.params.id)));
+ const adminBilling=require('../services/adminBilling').createAdminBillingService(db,env);
+ router.get('/admin/billing',async(req,res)=>res.json(await adminBilling.read(req.actor)));
+ router.post('/admin/billing/commands',async(req,res)=>res.json(await adminBilling.command(req.actor,req.body)));
+ router.post('/admin/billing/refunds',async(req,res)=>res.json(await adminBilling.refund(req.actor,req.body)));
+ const analytics=require('../services/analytics').createAnalyticsService(db);
+ router.get('/admin/analytics',async(req,res)=>res.json(await analytics.read(req.actor,req.query)));
+ const audit=require('../services/audit').createAuditService(db);
+ router.get('/admin/audit',async(req,res)=>res.json(await audit.read(req.actor,req.query)));
  return router;
 }
 module.exports={createRoutes};
+
 
 

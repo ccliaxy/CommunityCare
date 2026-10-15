@@ -6,6 +6,7 @@ import '../AuthStatus.css'
 
 let invitationClient: SupabaseClient | null = null
 export default function ResidentPasswordPage() {
+  const [accountSetup] = useState(() => new URLSearchParams(window.location.search).get('setup') === 'account')
   const [staffInvite] = useState(() => new URLSearchParams(window.location.search).get('setup') === 'staff')
   // Separate nonpersistent client: accepting an invitation must not replace staff login.
   const client = useMemo(() => {
@@ -29,10 +30,10 @@ export default function ResidentPasswordPage() {
       if (authError || !data.user) setError('Invitation link is missing, expired or already used. Request a fresh link from the administrator.')
       else { setEmail(data.user.email ?? ''); setReady(true) }
       // Auth has consumed the fragment. Never retain tokens in address-bar history.
-      window.history.replaceState(null, '', `${window.location.pathname}?setup=${staffInvite ? 'staff' : 'resident'}`)
+      window.history.replaceState(null, '', `${window.location.pathname}?setup=${accountSetup ? 'account' : staffInvite ? 'staff' : 'resident'}`)
     }).catch(() => { if (active) setError('Could not verify invitation. Check your connection.') })
     return () => { active = false }
-  }, [client, staffInvite])
+  }, [client, staffInvite, accountSetup])
   async function submit(event: FormEvent) {
     event.preventDefault()
     if (!client || busy || !ready) return
@@ -46,5 +47,5 @@ export default function ResidentPasswordPage() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Password could not be saved.') }
     finally { setBusy(false) }
   }
-  return <main className="cc-auth-status"><h1>CommunityCare · Set your password</h1>{done ? <p>{staffInvite ? <>Password saved. <a href="/">Open the web portal</a> and sign in with your email and new password.</> : <>Password saved. Open the CommunityCare mobile app and sign in with your email and new password.</>}</p> : <><p>{email || 'Checking invitation…'}</p>{error && <p role="alert">{error}</p>}{ready && <form onSubmit={submit}><p><label>New password <input type="password" autoComplete="new-password" minLength={12} required value={password} onChange={e => setPassword(e.target.value)} /></label></p><p><label>Confirm password <input type="password" autoComplete="new-password" required value={confirmation} onChange={e => setConfirmation(e.target.value)} /></label></p><button disabled={busy}>{busy ? 'Saving…' : 'Set password'}</button></form>}</>}</main>
+  return <main className="cc-auth-status"><h1>CommunityCare · Set your password</h1>{done ? <p>{accountSetup ? <>Password saved. Staff and administrators can sign in through the web portal. Elderly and family members use the CommunityCare mobile app.</> : staffInvite ? <>Password saved. <a href="/">Open the web portal</a> and sign in with your email and new password.</> : <>Password saved. Open the CommunityCare mobile app and sign in with your email and new password.</>}</p> : <><p>{email || 'Checking invitation…'}</p>{error && <p role="alert">{error}</p>}{ready && <form onSubmit={submit}><p><label>New password <input type="password" autoComplete="new-password" minLength={12} required value={password} onChange={e => setPassword(e.target.value)} /></label></p><p><label>Confirm password <input type="password" autoComplete="new-password" required value={confirmation} onChange={e => setConfirmation(e.target.value)} /></label></p><button disabled={busy}>{busy ? 'Saving…' : 'Set password'}</button></form>}</>}</main>
 }

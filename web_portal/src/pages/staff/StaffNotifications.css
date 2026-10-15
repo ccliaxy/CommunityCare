@@ -1,4 +1,8 @@
 .sn-root{position:relative;flex:none}
+.sd-app .sn-panel{animation:sn-soft-open 240ms cubic-bezier(.16,1,.3,1)}
+.sd-app .sn-bell{transition:background-color 180ms ease,color 180ms ease}
+@keyframes sn-soft-open{from{opacity:0;transform:translateY(-7px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.sd-app .sn-panel{animation:none}.sd-app .sn-bell{transition:none}}
 .sd-app .sn-bell{position:relative;border-radius:9px;width:40px;height:40px;display:grid;place-items:center}
 .sd-app .sn-bell.sn-selected{background:#006a63;color:white}
 .sn-count{position:absolute;top:-4px;right:-5px;min-width:18px;height:18px;border-radius:20px;padding:0 4px;background:#c62828;color:#fff;font-size:11px;line-height:18px;text-align:center;border:2px solid #fff;box-sizing:content-box}

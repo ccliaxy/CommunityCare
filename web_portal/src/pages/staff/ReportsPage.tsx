@@ -1,37 +1,86 @@
-import { useState } from 'react'
-import { staffNames, usePortal } from './PortalContext'
+import { useQuickAction } from './dashboardQuickAction'
+import type { QuickAction } from './dashboardQuickAction'
+import { useEffect, useState } from 'react'
+import { api } from '../../lib/backendApi'
+import { usePortal } from './PortalContext'
 import { csvDownload, includesSearch, Panel, Table } from './PortalUI'
+import { printIncidents } from './incidentRepository'
+import './ReportsPage.css'
 
-type Event = { day: string; group: string; type: string; seconds: number; staff: string }
-const events: Event[] = Array.from({ length: 14 }, (_, d) => {
-  const date = new Date(Date.UTC(2026, 8, 23 + d)).toISOString().slice(0, 10)
-  return Array.from({ length: 6 + d % 5 }, (_, n) => ({ day: date, group: n % 2 ? 'West Wing' : 'East Wing', type: ['SOS', 'Fall', 'Geofence', 'Missed Check-in'][n % 4], seconds: 80 + ((d * 97 + n * 137) % 690), staff: staffNames[n % 3] }))
-}).flat()
-const taskCounts = [142, 128, 156]
-function mean(values: number[]) { return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0 }
-function duration(seconds: number) { const value = Math.round(seconds); return `${Math.floor(value / 60)}m ${String(value % 60).padStart(2, '0')}s` }
-
-export default function ReportsPage() {
-  const { search, print } = usePortal()
-  const [range, setRange] = useState('7')
-  const [group, setGroup] = useState('All Resident Groups')
-  const lastDays = [...new Set(events.map(e => e.day))].slice(-Number(range))
-  const selected = events.filter(e => lastDays.includes(e.day) && (group === 'All Resident Groups' || e.group === group))
-  const days = lastDays.map(day => { const values = selected.filter(e => e.day === day).map(e => e.seconds); return { day, min: Math.min(...values), avg: mean(values), max: Math.max(...values), count: values.length } })
-  const seconds = selected.map(e => e.seconds)
-  const stats = [Math.min(...seconds), mean(seconds), Math.max(...seconds)]
-  const usage = ['SOS', 'Fall', 'Geofence', 'Missed Check-in'].map(type => ({ type, count: selected.filter(e => e.type === type).length }))
-  const staff = staffNames.map((name, index) => { const assigned = selected.filter(e => e.staff === name); return { name, tasks: taskCounts[index], alerts: assigned.length, response: duration(mean(assigned.map(e => e.seconds))), attendance: [98, 95, 100][index] } }).filter(s => includesSearch(search, s.name))
-  const chartRows = days.map(d => [d.day, duration(d.min), duration(d.avg), duration(d.max), d.count])
-  const staffRows = staff.map(s => [s.name, s.tasks, s.alerts, s.response, `${s.attendance}%`])
-  const headings = ['Date', 'Fastest', 'Average', 'Longest', 'Alerts']
-  const staffHeadings = ['Staff', 'Tasks (sample month)', 'Alerts (selected period)', 'Average Response', 'Attendance (sample month)']
-  const points = (key: 'min' | 'avg' | 'max') => days.map((d, i) => `${55 + i * 480 / Math.max(days.length - 1, 1)},${275 - d[key] / 60 * 16}`).join(' ')
-  const note = `Sample period ${lastDays[0]} to ${lastDays.at(-1)} · ${group}. Staff task totals and attendance use a fixed sample month.`
-  function csv() { csvDownload('communitycare-demo-analytics.csv', [['CommunityCare analytics — sample data'], [note], ['Metric', 'Response'], ...['Fastest', 'Average', 'Longest'].map((m, i) => [m, duration(stats[i])]), [], headings, ...chartRows, [], ['Alert type', 'Count'], ...usage.map(u => [u.type, u.count]), [], staffHeadings, ...staffRows]) }
-  return <div className="pp-main"><Panel title="Export Reports" actions={<><button className="sd-primary" onClick={() => print({ title: 'Reports & Analytics', headings: ['Section', 'Item', 'Value', 'Details'], rows: [...stats.map((s, i) => ['Response', ['Fastest', 'Average', 'Longest'][i], duration(s), 'Selected period']), ...days.map(d => ['Daily response', d.day, duration(d.avg), `Fastest ${duration(d.min)} / longest ${duration(d.max)} / ${d.count} alerts`]), ...usage.map(u => ['Usage', u.type, u.count, 'Selected period']), ...staff.map(s => ['Staff', s.name, `${s.alerts} alerts / ${s.response}`, `${s.tasks} monthly tasks / ${s.attendance}% monthly attendance`])], note })}>Print / Save PDF</button><button onClick={csv}>Export as CSV</button></>}><p className="pp-muted">{note} · Printing opens the browser dialog; choose Save as PDF.</p></Panel>
-    <div className="pp-report-grid"><Panel title="Response Times"><div className="pp-metrics">{['Fastest Response', 'Average Response', 'Longest Response'].map((title, i) => <div key={title}>{title}<strong>{duration(stats[i])}</strong></div>)}</div><div className="pp-legend"><span style={{ color: '#388c42' }}>● Fastest</span><span style={{ color: '#c96f00' }}>● Average</span><span style={{ color: '#d84242' }}>● Longest</span></div><svg className="pp-chart" viewBox="0 0 580 325" role="img" aria-label="Daily response time chart in minutes. Exact values are available in the table below.">{[0, 3, 6, 9, 12, 15].map(n => <g key={n}><line x1="55" x2="535" y1={275 - n * 16} y2={275 - n * 16} stroke="#dbe6de" /><text x="22" y={279 - n * 16}>{n}</text></g>)}<text x="18" y="18">Minutes</text>{(['min', 'avg', 'max'] as const).map((key, i) => <polyline key={key} points={points(key)} fill="none" stroke={['#388c42', '#ef9000', '#f04f54'][i]} strokeWidth="2.5" />)}{days.map((d, i) => (i % (days.length > 7 ? 2 : 1) === 0) && <text key={d.day} x={55 + i * 480 / Math.max(days.length - 1, 1)} y="303" textAnchor="middle">{d.day.slice(5)}</text>)}</svg><details><summary>View response-time data</summary><Table label="Response chart data"><thead><tr>{headings.map(h => <th key={h}>{h}</th>)}</tr></thead><tbody>{chartRows.map(row => <tr key={row[0]}>{row.map((v, i) => <td key={i}>{v}</td>)}</tr>)}</tbody></Table></details></Panel>
-    <Panel title="Alert & Service Usage"><label>Period<select value={range} onChange={e => setRange(e.target.value)}><option value="7">Last 7 sample days</option><option value="14">Last 14 sample days</option></select></label><label>Resident Group<select value={group} onChange={e => setGroup(e.target.value)}>{['All Resident Groups', 'East Wing', 'West Wing'].map(g => <option key={g}>{g}</option>)}</select></label><p className="pp-muted">Filters update response metrics, charts, alert counts and exported data. Header search filters staff performance.</p><svg className="pp-chart" viewBox="0 0 330 250" role="img" aria-label={usage.map(u => `${u.type}: ${u.count}`).join(', ')}><line x1="25" x2="315" y1="180" y2="180" stroke="#a8bbae" />{usage.map((u, i) => <g key={u.type}><rect x={40 + i * 70} y={180 - u.count * 120 / Math.max(...usage.map(v => v.count), 1)} width="36" height={u.count * 120 / Math.max(...usage.map(v => v.count), 1)} fill={['#ef5757', '#f29900', '#e6bc00', '#49a1e7'][i]} rx="3" /><text x={58 + i * 70} y={170 - u.count * 120 / Math.max(...usage.map(v => v.count), 1)} textAnchor="middle">{u.count}</text><text x={58 + i * 70} y="205" textAnchor="middle" transform={`rotate(-30 ${58 + i * 70} 205)`}>{u.type}</text></g>)}</svg><h3>Daily Alert Volume</h3><svg className="pp-chart" viewBox="0 0 330 180" role="img" aria-label={days.map(d => `${d.day}: ${d.count}`).join(', ')}><polygon points={`25,140 ${days.map((d, i) => `${25 + i * 280 / (days.length - 1)},${140 - d.count * 10}`).join(' ')} 305,140`} fill="#b5dcbc" /><polyline points={days.map((d, i) => `${25 + i * 280 / (days.length - 1)},${140 - d.count * 10}`).join(' ')} fill="none" stroke="#399747" strokeWidth="2" />{days.map((d, i) => <text key={d.day} x={25 + i * 280 / (days.length - 1)} y={130 - d.count * 10} textAnchor="middle">{d.count}</text>)}<text x="25" y="165">{lastDays[0]}</text><text x="305" y="165" textAnchor="end">{lastDays.at(-1)}</text></svg><p className="pp-muted">{selected.length} sample alerts in selected period.</p></Panel></div>
-    <Panel title="Staff Performance" actions={<button className="sd-primary" onClick={() => csvDownload('communitycare-demo-staff-performance.csv', [staffHeadings, ...staffRows])}>Download Staff CSV</button>}><div className="pp-performance"><Table label="Staff performance"><thead><tr>{['Staff Name', 'Tasks Completed¹', 'Alerts Responded²', 'Avg Response²', 'Attendance¹'].map(h => <th key={h}>{h}</th>)}</tr></thead><tbody>{staff.map(s => <tr key={s.name}><th>{s.name}</th><td>{s.tasks}</td><td>{s.alerts}</td><td>{s.response}</td><td>{s.attendance}%</td></tr>)}{!staff.length && <tr><td colSpan={5}>No staff match your search.</td></tr>}</tbody></Table><div className="pp-bars"><strong>Monthly Tasks Completed</strong>{staff.map(s => <div key={s.name}><span>{s.name} · {s.tasks}</span><i style={{ width: `${s.tasks / 180 * 100}%` }} /></div>)}<span>Scale: 0–180 tasks</span></div></div><p className="pp-muted">¹ Fixed sample month. ² Selected period and resident group. Historical sample dataset; new live-preview alerts do not alter historical analytics.</p></Panel>
-  </div>
+type Property = { id: string; name: string; time_zone: string; today: string }
+type Day = { day: string; alerts: number; responded: number; fastest: number | null; average: number | null; longest: number | null }
+type Staff = { id: string; name: string; tasks: number; responded: number; average: number | null; shifts: number; attended: number }
+type Report = { property_id: string; property_name: string; time_zone: string; start: string; end: string; generated_at: string; can_manage: boolean; summary: Omit<Day, 'day'> & { cancelled: number }; days: Day[]; usage: { type: string; count: number }[]; staff: Staff[] }
+const types: Record<string, string> = { sos: 'SOS', fall: 'Fall', geofence: 'Geofence', missed_check_in: 'Missed Check-in', other: 'Other' }
+function duration(value: number | null) {
+ if (value === null || !Number.isFinite(value) || value < 0) return '—'
+ const total = Math.round(value)
+ const days = Math.floor(total / 86400)
+ const hours = Math.floor(total % 86400 / 3600)
+ const minutes = Math.floor(total % 3600 / 60)
+ const seconds = total % 60
+ return [days > 0 ? `${days}d` : '', total >= 3600 ? `${hours}h` : '', total >= 60 ? `${minutes}m` : '', `${seconds}s`].filter(Boolean).join(' ')
 }
+const attendance = (s: Staff) => s.shifts ? `${Math.round(100 * s.attended / s.shifts)}% (${s.attended}/${s.shifts})` : '— (no ended shifts)'
+const definition = 'Response = alert occurrence to first acknowledgement, excluding cancelled alerts. Unacknowledged alerts have no response duration. Tasks are counted by completion time and completed-by staff. Attendance = ended, non-cancelled shifts with any overlapping clock-in / all ended shifts starting in the period; it is not punctuality or full-shift coverage.'
+export default function ReportsPage({ active = true, quick }: { active?: boolean; quick?: QuickAction }) {
+ const { search } = usePortal()
+ const [properties, setProperties] = useState<Property[]>([])
+ const [property, setProperty] = useState(''), [start, setStart] = useState(''), [end, setEnd] = useState('')
+ const [data, setData] = useState<Report | null>(null), [error, setError] = useState(''), [loading, setLoading] = useState(false), [retry, setRetry] = useState(0)
+ function choose(p: Property) { setProperty(p.id); setEnd(p.today); const day = new Date(`${p.today}T00:00:00Z`); day.setUTCDate(day.getUTCDate() - 6); setStart(day.toISOString().slice(0, 10)); setData(null) }
+ useEffect(() => {
+  if (!active) return
+  const controller = new AbortController()
+  setError(''); setLoading(true)
+  api<{ properties: Property[] }>('/reports/options', { signal: controller.signal }).then(result => {
+   if (controller.signal.aborted) return
+   setProperties(result.properties)
+   if (!result.properties.some(p => p.id === property)) { if (result.properties[0]) choose(result.properties[0]); else { setProperty(''); setData(null) } }
+  }).catch(e => { if (!controller.signal.aborted) { setError(e.message); setProperties([]); setData(null) } }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
+  return () => controller.abort()
+ // Reload accessible properties on page entry and explicit retry.
+ // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [active, retry])
+ useEffect(() => {
+  if (!active || !property || !start || !end || !properties.some(p => p.id === property)) return
+  const controller = new AbortController()
+  setData(null); setError(''); setLoading(true)
+  api<Report>(`/reports?${new URLSearchParams({ property_id: property, start, end })}`, { signal: controller.signal }).then(value => { if (!controller.signal.aborted) setData(value) }).catch(e => { if (!controller.signal.aborted) setError(e.message) }).finally(() => { if (!controller.signal.aborted) setLoading(false) })
+  return () => controller.abort()
+ }, [active, property, start, end, properties, retry])
+ useQuickAction(quick, active, q => {
+  if (q.action !== 'Generate Report') return true
+  if (!properties.length || loading) return false
+  const target = properties.find(p => p.id === q.property) || (!q.property ? properties[0] : undefined)
+  if (!target) { setError('Selected property is unavailable.'); return true }
+  choose(target); setRetry(n => n + 1); return true
+ })
+ const selected = properties.find(p => p.id === property)
+ const staff = data?.staff.filter(s => includesSearch(search, s.name)) ?? []
+ const dailyHeadings = ['Date', 'Fastest', 'Average', 'Longest', 'All alerts', 'Acknowledged (non-cancelled)']
+ const staffHeadings = ['Staff', 'Tasks completed', 'Alerts acknowledged', 'Average response', 'Attendance overlap']
+ const dailyRows = data?.days.map(d => [d.day, duration(d.fastest), duration(d.average), duration(d.longest), String(d.alerts), String(d.responded)]) ?? []
+ const staffRows = staff.map(s => [s.name, String(s.tasks), String(s.responded), duration(s.average), attendance(s)])
+ const note = data ? `${data.property_name} · ${data.start} to ${data.end} · ${data.time_zone} · Generated ${new Date(data.generated_at).toLocaleString()} · ${data.can_manage ? 'Property staff performance' : 'Your performance only'} · Staff search: ${search || 'All'}` : ''
+ function exportRows() { return [['CommunityCare Reports & Analytics'], [note], [definition], ['Alert volume includes cancellations. Response statistics use eligible acknowledgements at generation time.'], ['Metric', 'Value'], ['All alerts', String(data!.summary.alerts)], ['Cancelled alerts', String(data!.summary.cancelled)], ['Fastest', duration(data!.summary.fastest)], ['Average', duration(data!.summary.average)], ['Longest', duration(data!.summary.longest)], [], dailyHeadings, ...dailyRows, [], ['Alert type', 'Count'], ...data!.usage.map(u => [types[u.type] || u.type, String(u.count)]), [], staffHeadings, ...staffRows] }
+ function print() { if (!data) return; try { printIncidents('Reports & Analytics', ['Metric / Section', 'Value', 'Details', 'Details', 'Details', 'Details'], exportRows().map(r => [...r, ...Array(Math.max(0, 6 - r.length)).fill('')])) } catch (e) { setError((e as Error).message) } }
+ const maxSeconds = Math.max(60, ...(data?.days.map(d => d.longest ?? 0) ?? []))
+ const x = (i: number) => 55 + i * 480 / Math.max((data?.days.length ?? 1) - 1, 1)
+ const y = (s: number) => 270 - s / maxSeconds * 230
+ return <div className="pp-main pp-live-reports">
+  <Panel title="Reports & Analytics" actions={<><button disabled={!data || loading} className="sd-primary" onClick={print}>Print / Save PDF</button><button disabled={!data || loading} onClick={() => csvDownload('communitycare-analytics.csv', exportRows())}>Export as CSV</button></>}>
+   <div className="report-filters"><label>Property<select value={property} onChange={e => { const p = properties.find(p => p.id === e.target.value); if (p) choose(p) }}><option value="" disabled>Select property</option>{properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>From<input type="date" min="2000-01-01" max={end || selected?.today} value={start} onChange={e => { setData(null); setStart(e.target.value) }} /></label><label>To<input type="date" min={start} max={selected?.today} value={end} onChange={e => { setData(null); setEnd(e.target.value) }} /></label><button onClick={() => setRetry(n => n + 1)} disabled={loading}>Refresh report</button></div>
+   <p className="pp-muted">Choose up to 93 calendar days. Dates use the property's time zone. Header search filters staff rows and their exports.</p>
+   {error && <p role="alert" className="report-error">{error}</p>}{loading && <p role="status">Loading report…</p>}{!loading && !error && !properties.length && <p>No accessible properties.</p>}
+   {data && <p className="pp-muted">{note}</p>}
+  </Panel>
+  {data && <><div className="pp-report-grid"><Panel title="Response Times"><div className="pp-metrics">{(['fastest', 'average', 'longest'] as const).map(k => <div key={k}>{k.charAt(0).toUpperCase() + k.slice(1)} response<strong>{duration(data.summary[k])}</strong></div>)}</div><p>{data.summary.responded} eligible acknowledged alerts out of {data.summary.alerts} alerts ({data.summary.cancelled} cancelled).</p>
+   <div className="pp-legend"><span>🟢 Fastest</span><span>🟠 Average</span><span>🔴 Longest</span></div>
+   <svg className="pp-chart" viewBox="0 0 580 325" role="img" aria-label="Daily response times in minutes; exact values in the following table.">{[0, 1, 2, 3, 4].map(n => <g key={n}><line x1="55" x2="535" y1={y(maxSeconds * n / 4)} y2={y(maxSeconds * n / 4)} stroke="#dbe6de" /><text x="5" y={y(maxSeconds * n / 4) + 4}>{(maxSeconds * n / 240).toFixed(1)}</text></g>)}<text x="5" y="18">Minutes</text>{(['fastest', 'average', 'longest'] as const).map((k, index) => <g key={k} stroke={['#388c42', '#c96f00', '#d84242'][index]} fill={['#388c42', '#c96f00', '#d84242'][index]}>{data.days.map((d, i) => d[k] !== null && <g key={d.day}>{i > 0 && data.days[i - 1][k] !== null && <line x1={x(i - 1)} y1={y(data.days[i - 1][k]!)} x2={x(i)} y2={y(d[k]!)} strokeWidth="2" />}<circle cx={x(i)} cy={y(d[k]!)} r="3" /></g>)}</g>)}<text x="55" y="306">{data.start}</text><text x="535" y="306" textAnchor="end">{data.end}</text></svg>
+   {!data.summary.responded && <p>No eligible acknowledgements in this period.</p>}<details><summary>View daily data</summary><Table label="Daily response data"><thead><tr>{dailyHeadings.map(h => <th key={h}>{h}</th>)}</tr></thead><tbody>{dailyRows.map(r => <tr key={r[0]}>{r.map((v, i) => <td key={i}>{v}</td>)}</tr>)}</tbody></Table></details>
+  </Panel><Panel title="Alert & Service Usage"><div className="report-usage">{data.usage.map(u => <div key={u.type}><span>{types[u.type] || u.type}</span><strong>{u.count}</strong><progress max={Math.max(1, ...data.usage.map(v => v.count))} value={u.count} /></div>)}</div>{!data.usage.length && <p>No alerts in this period.</p>}<h3>Daily Alert Volume</h3><svg className="pp-chart" viewBox="0 0 580 180" role="img" aria-label="Daily alert volume; exact counts in the daily data table.">{data.days.map((d, i) => <rect key={d.day} x={x(i) - 2} y={140 - d.alerts / Math.max(1, ...data.days.map(v => v.alerts)) * 120} width="4" height={d.alerts / Math.max(1, ...data.days.map(v => v.alerts)) * 120} fill="#007f78"><title>{d.day}: {d.alerts}</title></rect>)}<text x="55" y="165">{data.start}</text><text x="535" y="165" textAnchor="end">{data.end}</text></svg><p className="pp-muted">Counts include cancelled alerts. Response statistics exclude them. All five alert types are included when present.</p></Panel></div>
+  <Panel title={data.can_manage ? 'Staff Performance' : 'My Performance'} actions={<button onClick={() => csvDownload('communitycare-staff-performance.csv', [[note], [definition], staffHeadings, ...staffRows])}>Download Staff CSV</button>}><Table label="Staff performance"><thead><tr>{staffHeadings.map(h => <th key={h}>{h}</th>)}</tr></thead><tbody>{staffRows.map((r, index) => <tr key={staff[index].id}>{r.map((v, i) => <td key={i}>{v}</td>)}</tr>)}{!staffRows.length && <tr><td colSpan={5}>No staff match your search.</td></tr>}</tbody></Table><p className="pp-muted">{definition}</p><p className="pp-muted">Historical records without a completed-by or acknowledged-by user contribute to property totals where applicable but cannot be attributed to staff. An open clock-in overlaps time up to report generation.</p></Panel></>}
+ </div>
+}
+

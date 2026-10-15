@@ -1,3 +1,5 @@
+import { useQuickAction } from './dashboardQuickAction'
+import type { QuickAction } from './dashboardQuickAction'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { api } from '../../lib/backendApi'
@@ -17,7 +19,7 @@ const plus = (day: string, n: number) => { const d = new Date(`${day}T12:00:00Z`
 const message = (e: unknown) => e instanceof Error ? e.message : 'Could not complete the request.'
 const label = (v: string) => v[0].toUpperCase() + v.slice(1)
 
-export default function StaffPage({ active = true }: { active?: boolean }) {
+export default function StaffPage({ active = true, quick }: { active?: boolean; quick?: QuickAction }) {
   const { search } = usePortal()
   const [options, setOptions] = useState<Options | null>(null)
   const [property, setProperty] = useState(''), [day, setDay] = useState('')
@@ -51,6 +53,16 @@ export default function StaffPage({ active = true }: { active?: boolean }) {
     const timer = window.setInterval(refresh, 30000); window.addEventListener('focus', refresh)
     return () => { window.clearInterval(timer); window.removeEventListener('focus', refresh) }
   }, [active, dialog])
+  useQuickAction(quick, active, q => {
+    if (!['Register Staff', 'Assign Shift'].includes(q.action)) return true
+    if (!options || busy) return false
+    const target = options.properties.find(p => p.id === (q.property || property)) || (!q.property ? options.properties[0] : undefined)
+    if (!target) { setError('Selected property is unavailable.'); return true }
+    if (property !== target.id) { setProperty(target.id); setDay(target.today); setData(null); return false }
+    if (!data || loading) return false
+    if (!target.can_manage || !data.can_manage) { setNotice('Only a Manager can invite staff or assign shifts for this property.'); return true }
+    setFormError(''); setDialog(q.action === 'Register Staff' ? {kind:'invite',title:'Invite Staff'} : {kind:'shift',title:'Create Shift'}); return true
+  })
   const manager = data?.can_manage ?? false
   const people = data?.members.filter(m => includesSearch(search, m.name)) ?? []
   const current = data?.members.filter(m => m.active) ?? []

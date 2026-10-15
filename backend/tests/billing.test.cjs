@@ -13,7 +13,7 @@ let o={id:oid,customer_id:'cus_mock',state:'pending',created_at:new Date().toISO
 const db={rpc:async(name,body)=>{writes.push({name,body});if(name==='node_billing_order'||name==='node_billing_lookup')return o;if(name==='node_billing_read')return {properties:[]};}};
 const transport=async(url,init)=>{
  calls.push({url,init});let data;
- if(url.includes('/prices/'))data={active:true,type:'recurring',recurring:{interval:'month',interval_count:1},unit_amount:19900,currency:'myr',billing_scheme:'per_unit',livemode:false};
+ if(url.includes('/prices/'))data={active:true,type:'recurring',recurring:{interval:'month',interval_count:1,usage_type:'licensed'},unit_amount:19900,currency:'myr',billing_scheme:'per_unit',livemode:false};
  else if(url.includes('/checkout/sessions?'))data={data:sessions,has_more:false};
  else if(url.endsWith('/checkout/sessions'))data={id:'cs_mock',url:'https://checkout.stripe.com/mock'};
  else if(url.includes('/invoices/'))data=invoice;
@@ -38,4 +38,5 @@ const service=createBillingService(db,{STRIPE_SECRET_KEY:'sk_test_mock',STRIPE_W
  const noKeys=createBillingService(db,{STRIPE_SECRET_KEY:'sk_live_forbidden',STRIPE_WEBHOOK_SECRET:secret},transport);await assert.rejects(()=>noKeys.checkout({id:'actor'},{property_id:pid,plan_id:oid}),/Configure Stripe test/);console.log('PASS Live key cannot make requests');tests++;
  console.log('ALL PASS',tests);
 })().catch(e=>{console.error(e);process.exitCode=1});
+
 

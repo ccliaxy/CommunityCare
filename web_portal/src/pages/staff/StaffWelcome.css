@@ -1,0 +1,3 @@
+.pp-header .staff-header-title{flex:1;min-width:0}
+.pp-header .staff-welcome{margin:3px 0 0;font-size:12px;line-height:1.4;font-weight:400;color:#60766f;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:760px){.pp-header .staff-welcome{font-size:11px}}

@@ -1,0 +1,12 @@
+.incident-live fieldset{border:0;margin:0;padding:0;min-width:0}
+.incident-live .incident-property{display:flex;gap:18px;align-items:center;margin-bottom:22px;flex-wrap:wrap}
+.incident-live .incident-property label{display:flex;align-items:center;gap:12px}
+.incident-live .incident-property select{max-width:340px;padding:10px;border:1px solid #b6ceca;border-radius:5px;background:white;color:#263d37}
+.incident-live .incident-error,.sd-dialog .incident-error{color:#c62828;background:#fff3f1;padding:12px;border-radius:6px}
+.incident-wrap,.incident-followup p{white-space:pre-wrap;overflow-wrap:anywhere}
+.incident-live td.incident-wrap{max-width:240px}
+.incident-live .incident-row-actions{display:flex;gap:6px;flex-wrap:wrap}
+.incident-linked{display:block;color:#006a63;font-size:10px;margin-top:4px}
+.incident-followup{padding:12px;border-bottom:1px solid #dce9e5}.incident-followup small{color:#60746e}
+.sd-dialog .incident-check{display:flex;align-items:flex-start;gap:10px}.sd-dialog .incident-check input{width:auto;margin-top:4px}
+@media(max-width:600px){.incident-live .incident-property label{width:100%;flex-direction:column;align-items:stretch}.incident-live .incident-property select{max-width:none}}

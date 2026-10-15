@@ -8,7 +8,7 @@ import { currentResidents, dayKey, incidentTrend, zone } from './dashboardData'
 import type { DashboardData } from './dashboardData'
 import './StaffDashboard.css'
 
-type Props = { onLogout: () => void; onResidents?: () => void; onTasks?: () => void; onPage?: (page: string) => void }
+type Props = { onLogout: () => void; onResidents?: () => void; onTasks?: () => void; onPage?: (page: string) => void; active?: boolean; onQuickAction?: (action: string, property: string) => void }
 const quickActions: { label: string; icon: StaffIconName }[] = [
   { label: 'New Task', icon: 'tasks' }, { label: 'Register Staff', icon: 'staff' },
   { label: 'Add Resident', icon: 'residents' }, { label: 'Log Incident', icon: 'incidents' },
@@ -18,7 +18,7 @@ const quickActions: { label: string; icon: StaffIconName }[] = [
 const badge = (status: string) => status === 'completed' || status === 'resolved' || status === 'closed' ? 'sd-completed' : status === 'active' ? 'sd-active' : status === 'missed' ? 'sd-missed' : 'sd-pending'
 const label = (value: string) => value.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase())
 const formatTime = (value: string) => new Date(value).toLocaleString('en-MY', { timeZone: zone })
-export default function StaffDashboard({ onPage }: Props) {
+export default function StaffDashboard({ onPage, onQuickAction, active = true }: Props) {
   const { search, setSearch, alerts: liveAlerts, alertsLoading, alertsError, refreshAlerts } = usePortal()
   const [data, setData] = useState<DashboardData | null>(null)
   const [error, setError] = useState('')
@@ -59,6 +59,7 @@ export default function StaffDashboard({ onPage }: Props) {
     window.addEventListener('communitycare:alerts-changed', reload)
     return () => { window.removeEventListener('communitycare:tasks-changed', reload); window.removeEventListener('communitycare:alerts-changed', reload) }
   }, [])
+  useEffect(() => { if (active) setTaskRevision(v => v + 1) }, [active])
   const request = useRef(0)
   useEffect(() => {
     const controller = new AbortController()
@@ -82,14 +83,6 @@ export default function StaffDashboard({ onPage }: Props) {
   const incidents = data ? scope(data.incidents).sort((a, b) => b.incident_time.localeCompare(a.incident_time)) : []
   const trend = incidentTrend(incidents, now)
   const maximum = Math.max(5, ...trend.current.map(d => d.count))
-  function exportSummary() {
-    if (!data) return
-    const rows = [['Metric', 'Value'], ['Residents', String(residents.length)], ['Tasks due today', String(tasks.length)], ['Unresolved alerts', String(alerts.length)], ['Incidents in last 7 calendar days', String(trend.total)], ['Previous 7 calendar days', String(trend.previousTotal)], ['Timezone', zone], ['Snapshot', now.toISOString()], ...trend.current.map(d => [d.day, String(d.count)])]
-    const csv = rows.map(row => row.map(value => `"${value.replaceAll('"', '""')}"`).join(',')).join('\r\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-    const link = document.createElement('a'); link.href = url; link.download = 'communitycare-dashboard.csv'; link.click()
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-  }
   return <div id="staff-top" className="sd-live-dashboard">
     {error && <p className="sd-error" role="alert">Could not load dashboard: {error}. Reload the browser page to retry.</p>}
     {ackError && <p className="sd-error" role="alert">{ackError}</p>}
@@ -108,10 +101,10 @@ export default function StaffDashboard({ onPage }: Props) {
             <p className="sd-muted">Acknowledging confirms receipt. Continue follow-up in Alerts.</p>
             {alertsError && <p className="sd-error" role="alert">Alert actions unavailable: {alertsError} <button onClick={() => void refreshAlerts()}>Retry loading alerts</button></p>}
           </section>
-          <section className="sd-card"><h2>Quick Actions</h2><div className="sd-quick-grid">{quickActions.map(action => <button key={action.label} disabled={action.label !== 'Generate Report'} title={action.label === 'Generate Report' ? 'Export current dashboard summary' : 'Not available yet'} onClick={exportSummary}><StaffIcon name={action.icon} /><span>{action.label}</span></button>)}</div><p className="sd-muted">Greyed-out actions are not available yet.</p></section>
+          <section className="sd-card"><h2>Quick Actions</h2><div className="sd-quick-grid">{quickActions.map(action => <button key={action.label} disabled={!onQuickAction || !data.properties.length} onClick={() => onQuickAction?.(action.label, property)}><StaffIcon name={action.icon} /><span>{action.label}</span></button>)}</div><p className="sd-muted">Choose an action to open its form. Staff invitations and shift assignment require Manager access.</p></section>
         </div>
         <div className="sd-right-column">
-          <section className="sd-card"><div className="sd-card-heading"><h2 className="sd-heading-accent">Daily Tasks</h2><button className="sd-primary" disabled title="Task creation is not connected yet"><StaffIcon name="plus" />Create Task</button></div><p>Due {dayKey(now)} · {zone}</p>
+          <section className="sd-card"><div className="sd-card-heading"><h2 className="sd-heading-accent">Daily Tasks</h2><button className="sd-primary" disabled={!onQuickAction || !data.properties.length} onClick={() => onQuickAction?.('New Task', property)}><StaffIcon name="plus" />Create Task</button></div><p>Due {dayKey(now)} · {zone}</p>
             <div className="sd-table-wrap"><table><thead><tr><th>Task</th><th>Assignee</th><th>Property</th><th>Due</th><th>Status</th></tr></thead><tbody>{tasks.map(t => {
               const member = data.memberships.find(m => m.id === t.assigned_membership_id)
               const assignee = member && data.users.find(u => u.id === member.staff_id)

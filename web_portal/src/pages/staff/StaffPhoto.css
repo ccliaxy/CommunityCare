@@ -1,0 +1,25 @@
+.sp-photo-avatar-wrap{position:relative;width:fit-content;margin:0 auto}
+.sp-photo .sp-avatar{overflow:hidden;margin-bottom:0}
+.sp-photo .sp-avatar img,.sp-photo-large img{width:100%;height:100%;object-fit:cover;display:block}
+.sp-profile .sp-photo button:disabled{opacity:.5;cursor:not-allowed}
+.sp-photo-editor{text-align:center;padding:8px 0}
+.sp-photo-large{width:160px;height:160px;border-radius:50%;overflow:hidden;margin:8px auto 20px;background:#def0e9;color:#007f78;display:grid;place-items:center;font-size:40px;font-weight:600}
+.sp-photo-editor .sp-photo-help{color:#60766f;font-size:12px;line-height:1.6;margin:12px 0}
+.sp-photo-buttons{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin:16px 0}
+.sp-photo-editor button{padding:9px 16px;border:1px solid #b7ceca;border-radius:6px;background:#f5faf8;color:#007f78;font:inherit;font-size:13px;cursor:pointer}
+.sp-photo-editor .sp-photo-save{background:#007f78;color:#fff;border-color:#007f78}
+.sp-photo-editor .sp-photo-remove{color:#c62828;border-color:#e3b0b0;background:#fff7f7}
+.sp-photo-error{color:#c62828;font-size:12px;overflow-wrap:anywhere}
+.sp-photo-success{color:#007f78;font-size:12px}
+.sp-photo-avatar-wrap{padding-bottom:8px}
+.sp-profile .sp-photo-trigger{position:relative;display:block;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;margin:0 auto}
+.sp-profile .sp-photo-trigger .sp-avatar{margin:0}
+.sp-photo-overlay{position:absolute;inset:0;display:grid;place-items:center;border-radius:50%;background:rgba(20,35,30,.5);color:white;opacity:0;transition:opacity .15s}
+.sp-photo-trigger:hover .sp-photo-overlay,.sp-photo-trigger:focus-visible .sp-photo-overlay,.sp-photo-overlay.is-visible{opacity:1}
+.sp-photo-menu{position:absolute;top:100%;left:50%;transform:translateX(-50%);z-index:8;width:190px;max-width:calc(100vw - 32px);padding:6px;background:#fff;border:1px solid #dce5e1;border-radius:12px;box-shadow:0 5px 18px #243b3524;text-align:left}
+.sp-profile .sp-photo-menu button{width:100%;display:flex;align-items:center;gap:12px;padding:11px 12px;border:0;border-radius:6px;background:transparent;color:#263d37;font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.sp-profile .sp-photo-menu button:hover:not(:disabled){background:#edf5f2}
+.sp-photo-menu svg{width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sp-profile .sp-photo-menu .sp-photo-menu-remove{border-top:1px solid #e5ece8;border-radius:0;color:#c62828;margin-top:4px}
+.sp-photo-full{display:block;max-width:100%;max-height:65vh;object-fit:contain;margin:12px auto;border-radius:8px}
+@media(prefers-reduced-motion:reduce){.sp-photo-overlay{transition:none}}

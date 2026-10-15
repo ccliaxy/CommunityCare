@@ -16,11 +16,11 @@ function ConnectedApp({ client }: { client: SupabaseClient }) {
   if (state.status === 'blocked') return <main className="cc-auth-status"><h1>Account access</h1><p role="alert">{state.error}</p><div><button onClick={auth.retry}>Retry verification</button><button onClick={() => void auth.signOut()}>Sign out</button></div></main>
   if (state.status === 'signed_out') return <LoginPage onSignIn={auth.signIn} busy={state.busy} authError={state.error} />
   const logout = () => { void auth.signOut(); window.scrollTo(0, 0) }
-  return <><div className="cc-session-banner"><span>Signed in as <strong>{state.profile.full_name}</strong> · {state.profile.role === 'system_admin' ? 'System Admin' : 'Property Staff'} · Signed in securely.</span><button onClick={logout}>Sign out</button></div>
-    {state.profile.role === 'system_admin' ? <AdminPortal key={state.profile.id} onLogout={logout} /> : <StaffPortal key={state.profile.id} onLogout={logout} />}
+  return <>{state.profile.role === 'system_admin' && <div className="cc-session-banner"><span>Signed in as <strong>{state.profile.full_name}</strong> · {state.profile.role === 'system_admin' ? 'System Admin' : 'Property Staff'} · Signed in securely.</span><button onClick={logout}>Sign out</button></div>}
+    {state.profile.role === 'system_admin' ? <AdminPortal key={state.profile.id} onLogout={logout} /> : <StaffPortal key={state.profile.id} onLogout={logout} userName={state.profile.full_name} />}
   </>
 }
 export default function App() {
-  if (['resident','staff'].includes(new URLSearchParams(window.location.search).get('setup')??'')) return <ResidentPasswordPage />
+  if (['resident','staff','account'].includes(new URLSearchParams(window.location.search).get('setup')??'')) return <ResidentPasswordPage />
   return supabase ? <ConnectedApp client={supabase} /> : <main className="cc-auth-status"><h1>Supabase configuration needed</h1><p role="alert">{configurationError}</p><p>Keep server secret keys out of this web application.</p></main>
 }

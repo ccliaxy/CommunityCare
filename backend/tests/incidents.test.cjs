@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict');
+const {createIncidentService,details,fileType}=require('../src/services/incidents');
+const id='00000000-0000-4000-8000-000000000001',other='00000000-0000-4000-8000-000000000002';
+const pdf=Buffer.from('%PDF-1.7\n test attachment');
+let tests=0;const pass=name=>{tests++;console.log('PASS',name)};
+(async()=>{
+ assert.equal(fileType(pdf),'application/pdf');assert.equal(fileType(Buffer.from([137,80,78,71,13,10,26,10])),'image/png');assert.equal(fileType(Buffer.from([255,216,255])),'image/jpeg');pass('Allowed file signatures recognized');
+ for(const bytes of [Buffer.from('<script>bad</script>'),Buffer.alloc(0),Buffer.alloc(10485761)])assert.throws(()=>fileType(bytes));pass('Unsupported and oversized files rejected');
+ assert.throws(()=>details({action:'followup',request_id:id,id,revision:0}));assert.throws(()=>details({action:'publish',request_id:id,id,revision:1,summary:' '}));pass('Missing summary and invalid revision rejected');
+ const d=details({action:'create',request_id:id,property_id:id,type:'Fall',description:'Test',location:'Hall',local_time:'2026-10-12T10:20',elderly_id:other,created_by:'untrusted'});assert.equal(d.p_data.elderly_id,other);assert(!('created_by' in d.p_data));pass('Client cannot set author or arbitrary fields');
+ let calls=[],fetches=[],ready=false;
+ const db={rpc:async(name,args)=>{calls.push({name,args});if(name==='node_incident_evidence')return {id:other,object_path:'property/incident/file',ready,filename:'test.pdf'};return {id,revision:1};}};
+ const transport=async(url,options)=>{fetches.push({url,options});return {ok:true,json:async()=>url.includes('/object/sign/')?{signedURL:'/object/sign/incident-evidence/property/incident/file?token=test'}:{Key:'test'}}};
+ const service=createIncidentService(db,{SUPABASE_URL:'https://project.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'mock-server-only'},transport);
+ await service.upload({id:'verified'},id,id,'test.pdf',pdf);
+ assert.equal(calls[0].args.p_actor,'verified');assert.equal(calls[0].args.p_data.byte_size,pdf.length);assert.equal(calls[0].args.p_data.sha256.length,64);assert.equal(calls.at(-1).args.p_id,other);assert.equal(calls.at(-1).args.p_action,'finish');assert(Buffer.isBuffer(fetches[0].options.body));pass('Upload authorizes, hashes bytes and finalizes recovered reservation');
+ ready=true;fetches=[];await service.upload({id:'verified'},id,id,'test.pdf',pdf);assert.equal(fetches.length,0);pass('Already completed upload is not duplicated');
+ const result=await service.download({id:'verified'},id,id);assert.equal(calls.at(-1).args.p_action,'read');assert.equal(JSON.parse(fetches[0].options.body).expiresIn,60);assert(result.url.endsWith('&download=test.pdf'));pass('Download checks permission and uses short-lived attachment URL');
+ await assert.rejects(()=>service.upload({id:'verified'},id,id,'../bad.pdf',pdf));pass('Unsafe filename rejected');
+ let fetched=false;const denied=createIncidentService({rpc:async()=>{throw Object.assign(new Error('Denied'),{code:'42501'})}},{},async()=>{fetched=true});await assert.rejects(()=>denied.download({id:'a'},id,id),e=>e.status===403);assert(!fetched);pass('Unauthorized request never reaches Storage');
+ ready=false;calls=[];const unavailable=createIncidentService(db,{SUPABASE_URL:'https://project.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'mock'},async()=>({ok:false}));await assert.rejects(()=>unavailable.upload({id:'verified'},id,id,'test.pdf',pdf));assert(!calls.some(c=>c.args.p_action==='finish'));pass('Failed storage upload is never marked ready');
+ console.log('ALL PASS',tests);
+})().catch(e=>{console.error(e);process.exitCode=1});

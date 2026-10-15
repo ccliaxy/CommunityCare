@@ -56,7 +56,7 @@ function createBillingService(db,env,transport=fetch){
    let o=await order(actor,body.property_id,body.plan_id);
    if(o.state==='subscribed')throw fail('Manage the current subscription before buying another plan.',409);
    const price=await stripe('/prices/'+encodeURIComponent(o.snapshot.price_id));
-   if(!price.active||price.type!=='recurring'||price.recurring?.interval!=='month'||price.recurring.interval_count!==o.snapshot.interval_months||price.unit_amount!==Math.round(Number(o.snapshot.price)*100)||price.currency!==o.snapshot.currency.toLowerCase()||!['myr','usd'].includes(price.currency)||price.billing_scheme!=='per_unit')throw fail('Stripe price does not match the configured plan.',409);
+   if(!price.active||price.type!=='recurring'||(price.recurring?.interval==='year'?price.recurring.interval_count*12:price.recurring?.interval==='month'?price.recurring.interval_count:0)!==o.snapshot.interval_months||price.unit_amount!==Math.round(Number(o.snapshot.price)*100)||price.currency!==o.snapshot.currency.toLowerCase()||!['myr','usd'].includes(price.currency)||price.billing_scheme!=='per_unit'||price.recurring?.usage_type!=='licensed'||price.transform_quantity||price.custom_unit_amount)throw fail('Stripe price does not match the configured plan.',409);
    if(!o.customer_id){const customer=await stripe('/customers',{'metadata[communitycare_order]':o.id},'cc-test-customer-'+o.id);o={...o,customer_id:customer.id};await bind(o);}
    const existing=await reconcile(o);
    if(existing?.status==='open')return {url:existing.url};

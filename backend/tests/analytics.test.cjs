@@ -1,0 +1,11 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const {createAnalyticsService,validate}=require('../src/services/analytics');
+const id='00000000-0000-4000-8000-000000000001';
+test('default report uses all properties and six months',()=>assert.deepEqual(validate(),{p_property:null,p_months:6}));
+test('explicit property and twelve months accepted',()=>assert.deepEqual(validate({property_id:id,months:'12'}),{p_property:id,p_months:12}));
+test('three months accepted',()=>assert.equal(validate({months:'3'}).p_months,3));
+for(const q of [{months:'0'},{months:'6.5'},{months:['6']},{months:'36'},{property_id:'all'},{property_id:[id]},{property_id:''}])test('invalid filter rejected '+JSON.stringify(q),()=>assert.throws(()=>validate(q),{status:400}));
+test('staff blocked before RPC',async()=>{let hit=false;const s=createAnalyticsService({rpc:async()=>{hit=true}});await assert.rejects(s.read({id,role:'property_staff'},{}),{status:403});assert.equal(hit,false)});
+test('actor identity is supplied by authenticated backend',async()=>{const s=createAnalyticsService({rpc:async(name,p)=>{assert.equal(name,'node_admin_analytics');assert.equal(p.p_actor,id);assert.equal(p.p_months,3);return {summary:{accounts:0}}}});assert.deepEqual(await s.read({id,role:'system_admin'},{months:'3',p_actor:'spoof'}),{summary:{accounts:0}})});
+test('database role rejection mapped to forbidden',async()=>{const s=createAnalyticsService({rpc:async()=>{throw Object.assign(Error('Suspended'),{code:'42501'})}});await assert.rejects(s.read({id,role:'system_admin'},{}),{status:403})});
+test('unknown property mapped to bad request',async()=>{const s=createAnalyticsService({rpc:async()=>{throw Object.assign(Error('Missing'),{code:'22023'})}});await assert.rejects(s.read({id,role:'system_admin'},{property_id:id}),{status:400})});

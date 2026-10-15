@@ -1,0 +1,5 @@
+.ad-live-properties fieldset{border:0;padding:0;margin:0;min-width:0}
+.ad-live-properties fieldset>label{display:grid;gap:8px;margin:12px 0}
+.ad-live-properties .ad-property-id{font-size:11px;overflow-wrap:anywhere;max-width:180px}
+.ad-live-properties button:disabled{opacity:.5;cursor:not-allowed}
+.ad-live-properties .ad-kpi strong{overflow-wrap:anywhere}

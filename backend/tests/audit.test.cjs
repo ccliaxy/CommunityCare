@@ -1,0 +1,13 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const {validate,createAuditService}=require('../src/services/audit');
+const actor={id:'00000000-0000-4000-8000-000000000001',role:'system_admin'};
+test('default filters use no invented dates or actors',()=>assert.equal(validate().p_actor,undefined));
+test('dates and export parsed',()=>{const p=validate({start:'2026-10-01',end:'2026-10-15',export:'1',access:'1'});assert.equal(p.p_export,true);assert.equal(p.p_access,true);assert.equal(p.p_start,'2026-10-01')});
+test('cursor remains a string without precision loss',()=>assert.equal(validate({before:'999999999999999999'}).p_before,'999999999999999999'));
+test('zero snapshot supported for empty history',()=>assert.equal(validate({snapshot:'0'}).p_until,'0'));
+for(const q of [{start:'2026-02-30',end:'2026-03-01'},{start:'2026-01-01'},{start:'2026-10-02',end:'2026-10-01'},{action:'LOGIN'},{search:['Admin']},{search:'x'.repeat(121)},{table:'a\nb'},{access:'true'},{export:'yes'},{before:'0'},{before:'1.5'},{snapshot:'-1'}])test('invalid filters rejected '+JSON.stringify(q),()=>assert.throws(()=>validate(q),{status:400}));
+test('literal search retained',()=>assert.equal(validate({search:'_%'}).p_search,'_%'));
+test('staff rejected before RPC',async()=>{let hit=false;const s=createAuditService({rpc:async()=>{hit=true}});await assert.rejects(s.read({...actor,role:'property_staff'},{}),{status:403});assert.equal(hit,false)});
+test('authenticated actor supplied by server',async()=>{const s=createAuditService({rpc:async(name,p)=>{assert.equal(name,'node_admin_audit');assert.equal(p.p_actor,actor.id);return {rows:[]}}});assert.deepEqual(await s.read(actor,{p_actor:'forged'}),{rows:[]})});
+test('database access check mapped to 403',async()=>{const s=createAuditService({rpc:async()=>{throw Object.assign(Error('inactive'),{code:'42501'})}});await assert.rejects(s.read(actor,{}),{status:403})});
+test('oversized export error passed through',async()=>{const s=createAuditService({rpc:async()=>{throw Object.assign(Error('Narrow filters'),{code:'22023'})}});await assert.rejects(s.read(actor,{export:'1'}),{status:400})});

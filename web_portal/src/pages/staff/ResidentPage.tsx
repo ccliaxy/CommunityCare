@@ -1,3 +1,5 @@
+import { useQuickAction } from './dashboardQuickAction'
+import type { QuickAction } from './dashboardQuickAction'
 import UnitManager from './UnitManager'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -15,7 +17,7 @@ const pretty = (v: string | null) => v ? v.replaceAll('_', ' ').replace(/\b\w/g,
 function initials(name: string) { return name.trim().split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase() }
 function statusClass(status: string) { return status === 'No active alert' ? 'rm-online' : status === 'Active Alert' ? 'rm-alert' : 'rm-offline' }
 
-export default function ResidentPage({ onLogout }: { onLogout: () => void }) {
+export default function ResidentPage({ onLogout, active = true, quick }: { onLogout: () => void; active?: boolean; quick?: QuickAction }) {
   const [manageUnits, setManageUnits] = useState(false)
   const [residents, setResidents] = useState<Resident[]>([])
   const [units, setUnits] = useState<Unit[]>([])
@@ -49,6 +51,13 @@ export default function ResidentPage({ onLogout }: { onLogout: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)
   const nameInput = useRef<HTMLInputElement>(null)
   useEffect(() => { if (modal) dialog.current?.showModal(); else dialog.current?.close() }, [modal])
+  useQuickAction(quick, active, q => {
+    if (q.action !== 'Add Resident') return true
+    if (loading || busy || loadError) return false
+    if (editing) { setNotice('Finish or cancel the current resident edit before adding a new resident.'); return true }
+    if (q.property) setNotice('Choose the appropriate unit for the property selected on Dashboard.')
+    nameInput.current?.scrollIntoView({block:'center'}); nameInput.current?.focus(); return true
+  })
   const visible = residents.filter(r => [r.name, r.unit, r.device].join(' ').toLowerCase().includes(search.trim().toLowerCase()) && (status === 'All Statuses' || r.status === status) && (unit === 'All Units' || r.unit === unit))
   function reset() { editingRow.current = null; setForm(blank); setEditing(null); setError('') }
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -92,7 +101,7 @@ export default function ResidentPage({ onLogout }: { onLogout: () => void }) {
               <label>Full Name<input ref={nameInput} value={form.name} maxLength={100} required placeholder="Jane Doe" onChange={e => setForm({ ...form, name: e.target.value })} /></label>
               {!editing && <label>Email<input type="email" required maxLength={254} autoComplete="off" value={form.email} placeholder="resident@example.com" onChange={e => setForm({ ...form, email: e.target.value })} /></label>}
               <div className="rm-fields"><label>Date of Birth<input type="date" min="1900-01-01" max={snapshotDay} required value={form.date_of_birth} onChange={e => setForm({ ...form, date_of_birth: e.target.value })} /></label><label>Gender<select required value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}><option value="">Select...</option>{['female', 'male', 'other', 'unspecified'].map(v => <option key={v} value={v}>{pretty(v)}</option>)}</select></label></div>
-              <div className="rm-fields"><label>Unit Number<button type="button" className="rm-link" disabled={busy || loading || Boolean(loadError)} onClick={() => setManageUnits(true)}>Manage units</button><select required value={form.unit_id} onChange={e => setForm({ ...form, unit_id: e.target.value })}><option value="">Select a unit…</option>{units.map(u => <option key={u.id} value={u.id}>{u.label}</option>)}</select></label><label>Blood Type<select value={form.blood} onChange={e => setForm({ ...form, blood: e.target.value })}>{['unknown', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(v => <option key={v} value={v}>{v === 'unknown' ? 'Unknown' : v}</option>)}</select></label></div>
+              <div className="rm-fields"><label>Unit Number<button type="button" className="rm-link" disabled={busy || loading || Boolean(loadError)} onClick={() => setManageUnits(true)}>Manage units</button><select required value={form.unit_id} onChange={e => setForm({ ...form, unit_id: e.target.value })}><option value="">Select a unit…</option>{[...units].sort((a, b) => Number(b.property_id === quick?.property) - Number(a.property_id === quick?.property)).map(u => <option key={u.id} value={u.id}>{u.label}</option>)}</select></label><label>Blood Type<select value={form.blood} onChange={e => setForm({ ...form, blood: e.target.value })}>{['unknown', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(v => <option key={v} value={v}>{v === 'unknown' ? 'Unknown' : v}</option>)}</select></label></div>
               <label>Mobile Device<input readOnly value={residents.find(r => r.id === editing)?.device ?? 'Not registered'} /></label>
               {error && <p className="sd-error" role="alert">{error}</p>}
               <div className="rm-form-actions"><button className="sd-primary" type="submit">{busy ? 'Saving…' : editing ? 'Save Changes' : 'Register Resident'}</button><button type="button" onClick={reset}>Cancel</button></div>
@@ -111,4 +120,5 @@ export default function ResidentPage({ onLogout }: { onLogout: () => void }) {
     <dialog className="sd-dialog" ref={dialog} aria-labelledby="rm-dialog-title" onCancel={() => setModal(null)}><h2 id="rm-dialog-title">{modal?.title}</h2>{modal?.resident ? <dl className="rm-detail">{Object.entries({ Name: modal.resident.name, Age: modal.resident.age, Gender: pretty(modal.resident.gender), Unit: modal.resident.unit, 'Blood type': modal.resident.blood ?? 'Not recorded', 'Mobile Device': modal.resident.device, 'Android version': modal.resident.mobile_device?.os_version ?? 'Not registered', 'Last registration': modal.resident.mobile_device ? new Date(modal.resident.mobile_device.last_registered_at).toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }) : 'Not registered', Status: modal.resident.status }).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl> : <p>{modal?.message}</p>}<div className="sd-dialog-actions"><button onClick={() => setModal(null)}>Close</button>{modal?.logout && <button className="sd-primary" onClick={onLogout}>Leave preview</button>}</div></dialog>
   </div>
 }
+
 

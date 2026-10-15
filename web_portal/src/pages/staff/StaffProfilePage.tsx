@@ -1,3 +1,4 @@
+import StaffPhoto from './StaffPhoto'
 import { Modal } from './PortalUI'
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -22,11 +23,12 @@ export default function StaffProfilePage({ onBack, onEditingChange }: { onBack: 
   const [error, setError] = useState(''), [notice, setNotice] = useState('')
   const [loading, setLoading] = useState(true), [saving, setSaving] = useState(false), [reload, setReload] = useState(0)
   const [discardAction, setDiscardAction] = useState<'back' | 'reload' | null>(null)
+  const [photoBusy, setPhotoBusy] = useState(false)
   const phoneInput = useRef<HTMLInputElement>(null)
   const phoneError = phoneValidation(phone)
   const alive = useRef(false), savingRef = useRef(false)
   const dirty = !!profile && (name !== profile.full_name || phone !== (profile.phone_number ?? ''))
-  useEffect(() => { onEditingChange(dirty, saving); return () => onEditingChange(false, false) }, [dirty, saving, onEditingChange])
+  useEffect(() => { onEditingChange(dirty, saving || photoBusy); return () => onEditingChange(false, false) }, [dirty, saving, photoBusy, onEditingChange])
   function populate(p: Profile) { setProfile(p); setName(p.full_name); setPhone(p.phone_number ?? '') }
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
   useEffect(() => {
@@ -65,18 +67,18 @@ export default function StaffProfilePage({ onBack, onEditingChange }: { onBack: 
   }
   const active = profile?.memberships.filter(m => m.active) ?? []
   return <main className="sp-profile">
-    <div className="sp-page-heading"><div><p className="sp-eyebrow">MY ACCOUNT</p><h2>My Profile</h2><p>Keep your personal details up to date.</p></div><button className="sp-secondary" disabled={saving} onClick={() => requestDiscard('back')}>← Back</button></div>
+    <div className="sp-page-heading"><div><p className="sp-eyebrow">MY ACCOUNT</p><h2>My Profile</h2><p>Keep your personal details up to date.</p></div><button className="sp-secondary" disabled={saving || photoBusy} onClick={() => requestDiscard('back')}>← Back</button></div>
     {loading && !profile && <div className="sp-card" role="status">Loading your profile…</div>}
-    {error && <div className="sp-feedback sp-error" role="alert"><p>{error}</p><button disabled={saving || loading} onClick={() => requestDiscard('reload')}>Reload saved profile</button></div>}
+    {error && <div className="sp-feedback sp-error" role="alert"><p>{error}</p><button disabled={saving || loading || photoBusy} onClick={() => requestDiscard('reload')}>Reload saved profile</button></div>}
     {notice && <p className="sp-feedback sp-success" role="status">{notice}</p>}
     {profile && <div className="sp-layout"><aside className="sp-card sp-summary">
-      <div className="sp-avatar" aria-hidden="true">{profile.full_name.split(/\s+/).filter(Boolean).slice(0, 2).map(n => Array.from(n)[0]).join('').toUpperCase()}</div>
+      <StaffPhoto name={profile.full_name} disabled={dirty || saving || loading} onBusy={setPhotoBusy} />
       <h3>{profile.full_name}</h3><p className="sp-email">{profile.email}</p><span className="sp-badge">Active account</span>
       <dl><div><dt>Portal</dt><dd>Property Staff</dd></div><div><dt>Active properties</dt><dd>{active.length}</dd></div><div><dt>Member since</dt><dd>{date(profile.created_at)}</dd></div></dl>
       <p className="sp-note">Your permissions are assigned separately for each property.</p>
     </aside><div className="sp-content">
       <section className="sp-card"><div className="sp-section-heading"><h3>Personal Information</h3><span className="sp-muted">Only visible contact details are editable</span></div>
-        <form onSubmit={save}><fieldset disabled={saving || loading} className="sp-fields"><div className="sp-form-grid">
+        <form onSubmit={save}><fieldset disabled={saving || loading || photoBusy} className="sp-fields"><div className="sp-form-grid">
           <label>Full name<input autoComplete="name" value={name} onChange={e => { setName(e.target.value); setNotice('') }} required maxLength={120} /></label>
           <label htmlFor="sp-contact-phone">Contact phone <span className="sp-optional">(optional)</span>{phoneError && <span id="sp-phone-error" className="sp-field-error" aria-live="polite">{phoneError}</span>}<input id="sp-contact-phone" ref={phoneInput} type="tel" inputMode="tel" autoComplete="tel" value={phone} aria-invalid={!!phoneError} aria-describedby={phoneError ? 'sp-phone-error sp-phone-help' : 'sp-phone-help'} onChange={e => { setPhone(e.target.value); setNotice('') }} maxLength={30} placeholder="e.g. +60 12-345 6789" /><small id="sp-phone-help">This is a contact number, not your login phone.</small></label>
           <label className="sp-full">Login email<input value={profile.email} readOnly type="email" /><small>Your login email is managed through account administration.</small></label>
@@ -94,3 +96,4 @@ export default function StaffProfilePage({ onBack, onEditingChange }: { onBack: 
     </Modal>}
   </main>
 }
+
