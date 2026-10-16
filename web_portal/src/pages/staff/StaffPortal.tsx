@@ -25,7 +25,7 @@ const pages: { id: string; label: string; title: string; icon: StaffIconName; se
   { id: 'tasks', label: 'Tasks', title: 'Task Management', icon: 'tasks', search: 'Search tasks...' },
   { id: 'alerts', label: 'Alerts', title: 'Emergency Alerts', icon: 'alerts', search: 'Search alerts...' },
   { id: 'staff', label: 'Staff', title: 'Staff Management', icon: 'staff', search: 'Search staff...' },
-  { id: 'subscription', label: 'Subscription', title: 'Subscription Management', icon: 'reports', search: 'Search invoices...' },
+  { id: 'subscription', label: 'Subscription', title: 'Subscription Management', icon: 'money', search: 'Search invoices...' },
   { id: 'incidents', label: 'Incidents', title: 'Incident Management', icon: 'incidents', search: 'Search incidents...' },
   { id: 'reports', label: 'Reports', title: 'Reports & Analytics', icon: 'reports', search: 'Search staff performance...' },
 ]
@@ -80,6 +80,7 @@ function Shell({ onLogout, userName }: { onLogout: () => void; userName: string 
   </div>
 }
 export default function StaffPortal({ onLogout, userName = 'Staff' }: { onLogout: () => void; userName?: string }) { return <PortalProvider><Shell onLogout={onLogout} userName={userName} /></PortalProvider> }
+
 
 
 

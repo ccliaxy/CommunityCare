@@ -1,0 +1,24 @@
+const assert=require('node:assert/strict');
+const {createAdminPhotoService,validatePhoto}=require('../src/services/adminPhoto');
+const actor={id:'00000000-0000-4000-8000-000000000001',role:'system_admin'};
+const jpeg=Buffer.from([255,216,255,192,0,11,8,2,0,2,0,1,1,17,0,255,217]);
+(async()=>{
+ validatePhoto(jpeg);
+ for(const b of [Buffer.from('<svg/>'),Buffer.alloc(2097153),Buffer.from([255,216,255,255,255,255,255,255,255,255,255,217])])assert.throws(()=>validatePhoto(b),e=>e.status===400);
+ let current=null,calls=[];const db={rpc:async(name,p)=>{assert.equal(p.p_actor,actor.id);if(p.p_write){if(current!==p.p_expected)throw Object.assign(new Error('stale'),{code:'40001'});const previous=current;current=p.p_photo;return {id:current,previous};}return {id:current};}};
+ const env={SUPABASE_URL:'https://test.invalid',SUPABASE_SERVICE_ROLE_KEY:'test-only'};
+ const transport=async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>url.includes('/sign/')?{signedURL:'/object/sign/admin-profile-photos/'+actor.id+'/'+current+'.jpg?token=test'}:{}};};
+ const service=createAdminPhotoService(db,env,transport);
+ assert.deepEqual(await service.read(actor),{id:null,url:null});assert.equal(calls.length,0);
+ await assert.rejects(()=>service.read({...actor,role:'family'}),e=>e.status===403);
+ await service.upload(actor,null,jpeg);assert.ok(current);const first=current;
+ const read=await service.read(actor);assert.ok(read.url.includes(actor.id));assert.equal(JSON.parse(calls.at(-1).options.body).expiresIn,600);
+ await assert.rejects(()=>service.upload(actor,null,jpeg),e=>e.status===409);
+ await service.upload(actor,first,jpeg);assert.notEqual(current,first);assert.equal(calls.at(-1).options.method,'DELETE');assert.ok(calls.at(-1).options.body.includes(first));
+ const failed=createAdminPhotoService(db,env,async()=>({ok:false}));const second=current;
+ await assert.rejects(()=>failed.upload(actor,current,jpeg),e=>e.status===502);assert.equal(current,second);
+ await service.remove(actor,current);assert.equal(current,null);
+ const uncertain=createAdminPhotoService({rpc:async(n,p)=>{if(p.p_write)throw new Error('Network lost');return {id:null};}},env,transport);calls=[];
+ await assert.rejects(()=>uncertain.upload(actor,null,jpeg));assert.equal(calls.length,1);assert.equal(calls[0].options.method,'POST');
+ console.log('PASS photo validation, ownership, signed URL, stale writes, upload failure, replacement/removal cleanup, uncertain commit retention');
+})().catch(e=>{console.error(e);process.exitCode=1});

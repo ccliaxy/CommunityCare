@@ -1,5 +1,6 @@
-export type StaffIconName = 'dashboard' | 'residents' | 'tasks' | 'alerts' | 'staff' | 'incidents' | 'reports' | 'settings' | 'logout' | 'plus' | 'search' | 'user' | 'maintenance' | 'shift' | 'menu'
+export type StaffIconName = 'dashboard' | 'residents' | 'tasks' | 'alerts' | 'staff' | 'incidents' | 'reports' | 'settings' | 'logout' | 'plus' | 'search' | 'user' | 'maintenance' | 'shift' | 'menu' | 'money'
 const paths: Record<StaffIconName, string> = {
+  money: 'M6 3h16v12H6zM2 7v12h16M14 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM6 7a4 4 0 0 0 4-4m8 0a4 4 0 0 0 4 4M6 11a4 4 0 0 1 4 4m8 0a4 4 0 0 1 4-4',
   dashboard: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',
   residents: 'M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-6 9v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6m1 3a5 5 0 0 1 3 4v2',
   tasks: 'M8 4H5v17h14V4h-3M8 2h8v5H8zM8 11h8m-8 4h8',
@@ -19,3 +20,4 @@ const paths: Record<StaffIconName, string> = {
 export default function StaffIcon({ name }: { name: StaffIconName }) {
   return <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={paths[name]} /></svg>
 }
+

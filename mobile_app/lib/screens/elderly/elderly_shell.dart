@@ -1,3 +1,4 @@
+import '../../config/system_configuration_page.dart';
 import '../../incidents/incident_updates_page.dart';
 import '../../subscription/property_subscription_page.dart';
 import '../../alerts/alerts_page.dart';
@@ -152,6 +153,7 @@ class _ElderlyShellState extends State<ElderlyShell> {
               ),
               actions: [
 if (widget.accountName != null) IconButton(tooltip: 'Incident updates', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const IncidentUpdatesPage())), icon: const Icon(Icons.description_outlined)),
+if (widget.accountName != null) IconButton(tooltip: 'System preferences', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SystemConfigurationPage())), icon: const Icon(Icons.settings_outlined)),
 if (widget.accountName != null) IconButton(tooltip: 'Property plan', onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const PropertySubscriptionPage())), icon: const Icon(Icons.card_membership_outlined)),
 if (widget.accountName != null) IconButton(
                   tooltip: 'Emergency alerts',

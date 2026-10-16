@@ -1,0 +1,32 @@
+/* Admin-only overrides: Staff keeps its existing teal theme. */
+.ad-shell .ad-header .ap-selected{background:var(--ad-blue,#286db7)!important;color:#fff;border-radius:7px}
+.ad-workspace:has(.ap-profile){background:#f4f7fb}
+.ad-shell .ap-profile{--ap-blue:var(--ad-blue,#286db7);--ap-ink:#253b53;--ap-muted:#5d7087;--ap-border:#d6e1ed;width:100%;color:var(--ap-ink)}
+.ad-shell .ap-profile .sp-page-heading h2,.ad-shell .ap-profile .sp-eyebrow{color:#145394}
+.ad-shell .ap-profile .sp-page-heading p:not(.sp-eyebrow),.ad-shell .ap-profile .sp-email,.ad-shell .ap-profile .sp-muted,.ad-shell .ap-profile .sp-note,.ad-shell .ap-profile dt,.ad-shell .ap-profile small,.ad-shell .ap-profile .sp-optional{color:var(--ap-muted)}
+.ad-shell .ap-profile .sp-card{border-color:var(--ap-border);box-shadow:0 3px 12px #173b6508}
+.ad-shell .ap-profile .sp-avatar,.ad-shell .ap-profile .sp-photo-large{background:#e4eef9;color:#1b5d9e}
+.ad-shell .ap-profile .sp-badge{background:#e6f0fb;color:#1b5d9e}
+.ad-shell .ap-profile .sp-summary dd{overflow-wrap:anywhere}
+.ad-shell .ap-profile .sp-summary dl,.ad-shell .ap-profile .sp-form-footer{border-color:var(--ap-border)}
+.ad-shell .ap-profile input{background:#fff;border-color:#b9cce1;color:var(--ap-ink)}
+.ad-shell .ap-profile input[readonly]{background:#eef3f8;color:var(--ap-muted)}
+.ad-shell .ap-profile input:focus-visible,.ad-shell .ap-profile button:focus-visible{outline-color:#4e9ae3}
+.ad-shell .ap-profile button{background:#f3f7fc;border-color:#b9cce1;color:#245b91}
+.ad-shell .ap-profile button.sp-primary,.ad-shell .ap-profile button.sp-photo-save,.ad-shell .ap-profile button.sd-primary{background:var(--ap-blue);border-color:var(--ap-blue);color:#fff}
+.ad-shell .ap-profile .sp-photo-trigger{padding:0;border:0;background:transparent}
+.ad-shell .ap-profile .sp-photo-overlay{background:rgba(19,45,77,.55)}
+.ad-shell .ap-profile .sp-photo-menu{border-color:var(--ap-border);box-shadow:0 5px 18px #173b6524}
+.ad-shell .ap-profile .sp-photo-menu button{background:transparent;color:var(--ap-ink)}
+.ad-shell .ap-profile .sp-photo-menu button:hover:not(:disabled){background:#eaf2fb}
+.ad-shell .ap-profile .sp-success{background:#edf5fd;border-color:#bad4e8;color:#24557e}
+.ad-shell .ap-profile .sp-photo-success{color:#24557e}
+.ad-shell .ap-profile .sd-dialog{color:var(--ap-ink);box-shadow:0 16px 80px #173b6544}
+.ad-shell .ap-profile .sd-dialog::backdrop{background:#142c4699}
+.ad-shell .ap-profile .sd-dialog h2{color:#145394}
+/* Keep destructive actions and validation visibly red. */
+.ad-shell .ap-profile .sp-field-error,.ad-shell .ap-profile .sp-photo-error{color:#c62828}
+.ad-shell .ap-profile input[aria-invalid=true]{border-color:#c62828;box-shadow:0 0 0 1px #c62828}
+.ad-shell .ap-profile input[aria-invalid=true]:focus-visible{outline-color:#c62828}
+.ad-shell .ap-profile button.sp-photo-remove{background:#fff7f7;border-color:#e3b0b0;color:#c62828}
+.ad-shell .ap-profile .sp-photo-menu button.sp-photo-menu-remove{color:#c62828;border-top-color:#e3b0b0}

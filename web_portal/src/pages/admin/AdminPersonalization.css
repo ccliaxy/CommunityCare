@@ -1,0 +1,10 @@
+.ad-personal-settings{max-width:1100px}.ad-personal-settings fieldset{border:0;padding:0;margin:0;min-width:0}.ad-personal-settings small{color:#5d7087;font-weight:400}.ad-shell .ad-header .ad-personal-selected{background:#286db7!important;color:#fff;border-radius:7px}
+.ad-shell[data-density=compact] .ad-table th,.ad-shell[data-density=compact] .ad-table td{padding:8px 10px}
+.ad-shell[data-text-size=large]{font-size:16px}
+.ad-shell[data-text-size=large] label,.ad-shell[data-text-size=large] .ad-table,.ad-shell[data-text-size=large] .ad-table thead th,.ad-shell[data-text-size=large] .ad-table td button{font-size:15px}
+.ad-shell[data-text-size=large] .ad-muted,.ad-shell[data-text-size=large] small,.ad-shell[data-text-size=large] .ad-kpi,.ad-shell[data-text-size=large] .ad-badge{font-size:14px}
+.ad-shell[data-text-size=large] h2{font-size:22px}.ad-shell[data-text-size=large] h3{font-size:19px}
+.ad-shell[data-text-size=large] .sp-profile label,.ad-shell[data-text-size=large] .sp-profile input,.ad-shell[data-text-size=large] .sp-profile dd,.ad-shell[data-text-size=large] .sp-profile button{font-size:16px}
+.ad-shell[data-text-size=large] .an-open strong{font-size:16px}.ad-shell[data-text-size=large] .an-open span,.ad-shell[data-text-size=large] .an-toolbar,.ad-shell[data-text-size=large] .an-item-actions,.ad-shell[data-text-size=large] .an-filters button{font-size:14px}
+.ad-shell[data-reduce-motion=true] *,.ad-shell[data-reduce-motion=true] *::before,.ad-shell[data-reduce-motion=true] *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+@media(prefers-reduced-motion:reduce){.ad-shell *,.ad-shell *::before,.ad-shell *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}

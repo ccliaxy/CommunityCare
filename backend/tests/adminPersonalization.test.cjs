@@ -1,0 +1,12 @@
+const {test}=require('node:test'),assert=require('node:assert/strict');
+const {createAdminPreferencesService}=require('../src/services/adminPreferences');
+const {createAdminNotificationService}=require('../src/services/adminNotifications');
+const actor={id:'own',role:'system_admin'};
+for(const role of ['property_staff','elderly','family'])test(role+' forbidden',async()=>{await assert.rejects(createAdminPreferencesService({}).read({...actor,role}),{status:403});await assert.rejects(createAdminNotificationService({}).list({...actor,role}),{status:403})});
+for(const b of [null,[],{}, {value:{},revision:-1},{value:{},revision:1.5},{value:{},revision:0,p_actor:'other'}])test('invalid preference body '+JSON.stringify(b),()=>assert.throws(()=>createAdminPreferencesService({}).save(actor,b),{status:400}));
+test('preferences use own identity',async()=>{await createAdminPreferencesService({rpc:async(n,p)=>{assert.equal(n,'node_admin_preferences');assert.equal(p.p_actor,'own');assert.equal(p.p_expected,0)}}).save(actor,{value:{},revision:0})});
+for(const [code,status] of [['42501',403],['40001',409],['22023',400]])test('maps '+code,async()=>{await assert.rejects(createAdminPreferencesService({rpc:async()=>{throw Object.assign(Error('test'),{code})}}).read(actor),{status})});
+for(const q of [{filter:'other'},{before:'0'},{before:'-1'},{before:'1.2'},{before:[]}])test('invalid notification query '+JSON.stringify(q),async()=>assert.rejects(createAdminNotificationService({}).list(actor,q),{status:400}));
+test('31 item lookahead becomes 30 and string cursor',async()=>{const r=await createAdminNotificationService({rpc:async(n,p)=>{assert.equal(n,'node_admin_notifications');assert.equal(p.p_actor,'own');return {unread_count:31,items:Array.from({length:31},(_,i)=>({id:String(i),cursor:String(100-i)}))}}}).list(actor);assert.equal(r.items.length,30);assert.equal(r.next_cursor,'71')});
+test('invalid read id rejected',async()=>assert.rejects(createAdminNotificationService({}).read(actor,'bad'),{status:400}));
+test('read uses authenticated owner',async()=>{const id='00000000-0000-4000-8000-000000000001';await createAdminNotificationService({rpc:async(n,p)=>{assert.equal(n,'node_admin_notification_read');assert.deepEqual(p,{p_actor:'own',p_id:id})}}).read(actor,id)});

@@ -11,7 +11,9 @@ function createRoutes(db,env){
  const properties=require('../services/properties').createPropertyService(db);
  const billing=require('../services/billing').createBillingService(db,env);
  const incidents=require('../services/incidents').createIncidentService(db,env);
+ const configuration=require('../services/configuration').createConfigurationService(db);
  const router=express.Router(), residents=createResidentService(db,env), tasks=createTaskService(db), alerts=createAlertService(db);
+ router.get('/configuration',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['system_admin','property_staff','elderly','family']);res.json(await configuration.read(actor));});
  router.get('/mobile/properties',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly','family']);res.json(await properties.linked(actor));});
  router.get('/mobile/incidents',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly','family']);res.json(await incidents.mobile(actor));});
  router.get('/mobile/subscription',async(req,res)=>{const actor=await db.authenticate(req.headers.authorization?.match(/^Bearer (.+)$/i)?.[1],['elderly','family']);res.json(await billing.mobile(actor));});
@@ -73,6 +75,7 @@ function createRoutes(db,env){
  router.get('/staff/profile/photo',async(req,res)=>{res.set('Cache-Control','no-store');res.json(await photo.read(req.actor));});
  router.put('/staff/profile/photo',express.raw({type:'application/octet-stream',limit:'2mb'}),async(req,res)=>res.json(await photo.upload(req.actor,req.query.expected,req.body)));
  router.delete('/staff/profile/photo',async(req,res)=>res.json(await photo.remove(req.actor,req.query.expected)));
+ router.put('/admin/configuration',async(req,res)=>res.json(await configuration.save(req.actor,req.body)));
  router.get('/admin/properties',async(req,res)=>res.json(await properties.list(req.actor)));
  router.post('/admin/properties/commands',async(req,res)=>res.json(await properties.command(req.actor,req.body)));
  router.get('/staff/properties',async(req,res)=>res.json(await properties.linked(req.actor)));
@@ -90,6 +93,21 @@ function createRoutes(db,env){
  router.get('/admin/analytics',async(req,res)=>res.json(await analytics.read(req.actor,req.query)));
  const audit=require('../services/audit').createAuditService(db);
  router.get('/admin/audit',async(req,res)=>res.json(await audit.read(req.actor,req.query)));
+ const adminDashboard=require('../services/adminDashboard').createAdminDashboardService(db);
+ router.get('/admin/dashboard',async(req,res)=>res.json(await adminDashboard.read(req.actor,req.query)));
+ const adminProfile=require('../services/adminProfile').createAdminProfileService(db);
+ router.get('/admin/profile',async(req,res)=>res.json(await adminProfile.read(req.actor)));
+ router.patch('/admin/profile',async(req,res)=>res.json(await adminProfile.update(req.actor,req.body)));
+ const adminPhoto=require('../services/adminPhoto').createAdminPhotoService(db,env);
+ router.get('/admin/profile/photo',async(req,res)=>res.json(await adminPhoto.read(req.actor)));
+ router.put('/admin/profile/photo',express.raw({type:'application/octet-stream',limit:'2mb'}),async(req,res)=>res.json(await adminPhoto.upload(req.actor,req.query.expected,req.body)));
+ router.delete('/admin/profile/photo',async(req,res)=>res.json(await adminPhoto.remove(req.actor,req.query.expected)));
+ const preferences=require('../services/adminPreferences').createAdminPreferencesService(db);
+ router.get('/admin/preferences',async(req,res)=>res.json(await preferences.read(req.actor)));
+ router.put('/admin/preferences',async(req,res)=>res.json(await preferences.save(req.actor,req.body)));
+ const adminNotifications=require('../services/adminNotifications').createAdminNotificationService(db);
+ router.get('/admin/notifications',async(req,res)=>res.json(await adminNotifications.list(req.actor,req.query)));
+ router.post('/admin/notifications/:id/read',async(req,res)=>res.json(await adminNotifications.read(req.actor,req.params.id)));
  return router;
 }
 module.exports={createRoutes};

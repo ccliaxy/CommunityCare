@@ -1,0 +1,33 @@
+.ad-config-fields{display:grid;grid-template-columns:minmax(0,1fr);gap:28px;border:0;padding:0;margin:0;min-width:0}
+.ad-config-status{background:#eaf2fb;border:1px solid #d6e1ed;border-radius:10px;padding:20px 24px;margin:0}
+.ad-config-status p{margin:8px 0;max-width:850px;line-height:1.6}
+.ad-config-status small{display:block;margin-bottom:12px}
+.ad-config-fields:disabled{opacity:.65}
+.ad-config-fields>.ad-narrow-grid{grid-template-columns:minmax(260px,1fr) minmax(0,2fr);gap:24px;align-items:stretch}
+.ad-config-fields .ad-panel{padding:26px;border-radius:12px;min-width:0}
+.ad-config-fields .ad-panel>.ad-heading{margin-bottom:24px;align-items:center}
+.ad-config-fields .ad-field-grid{gap:20px 28px;align-items:start}
+.ad-config-fields .ad-field-grid>div{min-width:0}
+.ad-config-fields .ad-four-fields{gap:20px}
+.ad-config-fields .ad-contact-list{margin-top:12px;margin-bottom:18px;gap:10px}
+.ad-config-fields .ad-contact-list li{padding:12px;align-items:center}
+.ad-config-fields .ad-contact-list span{min-width:0;overflow-wrap:anywhere;line-height:1.5}
+.ad-config-fields .ad-contact-list button{flex-shrink:0}
+.ad-config-fields .ad-toggle{gap:16px;margin-bottom:0}
+.ad-config-fields .ad-toggle input{flex-shrink:0}
+.ad-config-fields>.ad-panel>.ad-toggle{max-width:420px;margin:4px 0 18px}
+.ad-config-fields .ad-heading .ad-toggle{padding:0}
+.ad-config-fields .ad-panel>.ad-muted{line-height:1.7;margin:18px 0}
+@media(max-width:1250px){
+ .ad-config-fields>.ad-narrow-grid{grid-template-columns:minmax(0,1fr)}
+ .ad-config-fields .ad-four-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+ .ad-config-fields{gap:20px}
+ .ad-config-fields>.ad-narrow-grid{gap:20px}
+ .ad-config-fields .ad-panel{padding:20px}
+ .ad-config-status{padding:18px}
+ .ad-config-fields .ad-field-grid,.ad-config-fields .ad-four-fields{grid-template-columns:minmax(0,1fr);gap:16px}
+ .ad-config-fields .ad-panel>.ad-heading{align-items:flex-start;gap:16px}
+ .ad-config-fields .ad-heading .ad-toggle{flex-wrap:wrap}
+}

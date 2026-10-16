@@ -1,0 +1,2 @@
+export default function AdminSettingsIcon(){return <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"><g transform="translate(1 0)"><path d="m9 2-.5 3-2 1.2-2.8-1-2 3.5L4 10.5v3l-2.3 1.8 2 3.5 2.8-1 2 1.2.5 3h4l.5-3 2-1.2 2.8 1 2-3.5-2.3-1.8v-3l2.3-1.8-2-3.5-2.8 1-2-1.2-.5-3Z"/><circle cx="11" cy="12" r="3.5"/></g></svg>}
+
